@@ -28,7 +28,7 @@ class TestLudicrous < Test::Unit::TestCase
         return bar(x)
       end
     end
-    assert_equal 42, compile_and_run(foo.new, :foo, 42)
+    assert_equal [ 42 ], compile_and_run(foo.new, :foo, 42)
   end
 
   def test_call_method_two_args
