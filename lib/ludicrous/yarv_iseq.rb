@@ -138,9 +138,6 @@ class RubyVM
       # env.stack.sync_sp
       # env.stack.debug_inspect
     end
-
-    def ludicrous_compile_catch_table(function, env)
-    end
   end
 end
 
