@@ -37,6 +37,18 @@ if have_struct_member("struct RArray", "len", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RARRAY_LEN"
 end
 
+if have_struct_member("struct RArray", "as.heap.len", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RARRAY_AS_HEAP_LEN"
+end
+
+if have_struct_member("struct RArray", "as.heap.ptr", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RARRAY_AS_HEAP_PTR"
+end
+
+if have_struct_member("struct RArray", "as.ary", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RARRAY_AS_ARY"
+end
+
 if have_struct_member("struct RArray", "ptr", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RARRAY_PTR"
 end

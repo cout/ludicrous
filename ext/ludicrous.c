@@ -129,6 +129,40 @@ static VALUE function_ruby_struct_member(
   return Data_Wrap_Struct(rb_cValue, 0, 0, result);
 }
 
+static VALUE function_have_ruby_struct_member(
+    VALUE self, VALUE struct_name, VALUE member_name)
+{
+  VALUE member_name_info = rb_hash_aref(
+      struct_name_to_member_name_info, 
+      struct_name);
+
+  if(member_name_info == Qnil)
+  {
+    return Qfalse;
+  }
+
+  VALUE member_info_v = rb_hash_aref(
+      member_name_info,
+      member_name);
+
+  if(member_info_v == Qnil)
+  {
+    return Qfalse;
+  }
+
+  return Qtrue;
+}
+
+static VALUE function_ruby_struct_member_offset(
+    VALUE self, VALUE struct_name, VALUE member_name)
+{
+  struct Member_Info * member_info = get_member_info(
+      struct_name,
+      member_name);
+
+  return ULONG2NUM(member_info->offset);
+}
+
 static VALUE function_set_ruby_struct_member(
     VALUE self, VALUE struct_name, VALUE member_name, VALUE ptr_v, VALUE value_v)
 {
@@ -421,6 +455,8 @@ void Init_ludicrous()
   rb_cFunction = rb_define_class_under(rb_mJIT, "Function", rb_cObject);
   rb_define_method(rb_cFunction, "set_ruby_source", function_set_ruby_source, 1);
   rb_define_method(rb_cFunction, "ruby_struct_member", function_ruby_struct_member, 3);
+  rb_define_method(rb_cFunction, "ruby_struct_member_offset", function_ruby_struct_member_offset, 2);
+  rb_define_method(rb_cFunction, "have_ruby_struct_member", function_have_ruby_struct_member, 2);
   rb_define_method(rb_cFunction, "set_ruby_struct_member", function_set_ruby_struct_member, 4);
 
   rb_cValue = rb_define_class_under(rb_mJIT, "Value", rb_cObject);
@@ -453,6 +489,7 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_ary_pop);
   DEFINE_FUNCTION_POINTER(rb_ary_store);
   DEFINE_FUNCTION_POINTER(rb_ary_entry);
+  DEFINE_FUNCTION_POINTER(rb_ary_at);
   DEFINE_FUNCTION_POINTER(rb_ary_concat);
   DEFINE_FUNCTION_POINTER(rb_ary_to_ary);
   DEFINE_FUNCTION_POINTER(rb_ary_dup);
@@ -606,6 +643,19 @@ void Init_ludicrous()
 #ifdef HAVE_ST_RARRAY_PTR
   DEFINE_RUBY_STRUCT_MEMBER(RArray, ptr, jit_type_void_ptr);
 #endif
+
+#ifdef HAVE_ST_RARRAY_AS_HEAP_LEN
+  DEFINE_RUBY_STRUCT_MEMBER(RArray, as.heap.len, jit_type_int);
+#endif
+
+#ifdef HAVE_ST_RARRAY_AS_HEAP_PTR
+  DEFINE_RUBY_STRUCT_MEMBER(RArray, as.heap.ptr, jit_type_void_ptr);
+#endif
+
+#ifdef HAVE_ST_RARRAY_AS_ARY
+  DEFINE_RUBY_STRUCT_MEMBER(RArray, as.ary, jit_type_void_ptr);
+#endif
+
   // TODO: capa, shared
 
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, ptr, jit_type_void_ptr);
@@ -738,6 +788,18 @@ void Init_ludicrous()
 
 #ifdef RUBY_VM
   rb_define_const(rb_mLudicrous, "RUBY_VM_FROZEN_CORE", rb_mRubyVMFrozenCore);
+#endif
+
+#ifdef RARRAY_EMBED_FLAG
+  rb_define_const(rb_mLudicrous, "RARRAY_EMBED_FLAG", INT2NUM(RARRAY_EMBED_FLAG));
+#endif
+
+#ifdef RARRAY_EMBED_LEN_MASK
+  rb_define_const(rb_mLudicrous, "RARRAY_EMBED_LEN_MASK", INT2NUM(RARRAY_EMBED_LEN_MASK));
+#endif
+
+#ifdef RARRAY_EMBED_LEN_SHIFT
+  rb_define_const(rb_mLudicrous, "RARRAY_EMBED_LEN_SHIFT", INT2NUM(RARRAY_EMBED_LEN_SHIFT));
 #endif
 
 #ifdef NEED_MINIMAL_NODE
