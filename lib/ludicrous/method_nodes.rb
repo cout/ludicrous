@@ -238,6 +238,8 @@ class VariableArgumentsCompiler < ArgumentsCompiler
     raise "Can't handle block arg"
   end
 
+  # TODO: on YARV, we can optimize this by branching directly to the
+  # code that sets all the arguments that were not passed in
   def compile_assign_optional_argument(env, arg, idx, argc, argv)
     val = env.function.value(JIT::Type::OBJECT)
     var_idx = env.function.const(JIT::Type::INT, idx)
@@ -253,7 +255,7 @@ class VariableArgumentsCompiler < ArgumentsCompiler
     } .else {
       # this arg was not passed in
       arg = @optional_args[arg.name]
-      val.store(@node.ludicrous_compile_optional_argument(arg))
+      val.store(@node.ludicrous_compile_optional_default(env, arg))
     } .end
 
     env.scope.arg_set(arg.name, val)
@@ -281,7 +283,7 @@ class SCOPE
         scope)
   end
 
-  def ludicrous_compile_optional_argument(arg)
+  def ludicrous_compile_optional_default(env, arg)
     node = arg.node_or_iseq_for_default
     return node.ludicrous_compile(env.function, env)
   end
@@ -327,13 +329,20 @@ class METHOD
         self.body)
   end
 
-  def ludicrous_compile_optional_argument(arg)
-    raise "Unable to compile optional argument"
+  def ludicrous_compile_optional_default(env, arg)
+    arg.iseq.each(arg.pc_start) do |instruction|
+      arg.iseq.ludicrous_compile_next_instruction(
+          env.function,
+          env,
+          instruction)
+    end
   end
 
   def ludicrous_compile_into_function(
       origin_class,
       compile_options = Ludicrous::CompileOptions.new)
+
+    # puts self.body.disasm
 
     compiler = MethodNodeCompiler.new(
         self,
@@ -341,6 +350,11 @@ class METHOD
         compile_options)
 
     result = compiler.compile do |function, env|
+      if self.body.arg_opt_table.size > 0 then
+        # TODO: we can remove this in the future
+        env.branch(self.body.arg_opt_table[-1])
+      end
+
       # LEAVE instruction should generate return instruction
       self.body.ludicrous_compile(function, env)
     end
