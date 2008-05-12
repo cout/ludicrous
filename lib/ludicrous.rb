@@ -1,7 +1,8 @@
 require 'thread'
-require 'nodewrap'
-require 'node_to_a'
-require 'methodsig'
+require 'internal/node'
+require 'internal/node/to_a'
+require 'internal/method/signature'
+require 'internal/noex'
 
 require 'jit'
 require 'jit/value'

@@ -4,7 +4,7 @@
 #include <node.h>
 #include <rubyjit.h>
 
-/* Defined in nodewrap */
+/* Defined in ruby-internal */
 VALUE wrap_node(NODE * n);
 NODE * unwrap_node(VALUE v);
 VALUE eval_ruby_node(NODE * node, VALUE self, VALUE cref);
@@ -368,8 +368,8 @@ void Init_ludicrous()
 
   DEFINE_FUNCTION_POINTER(rb_node_newnode);
 
-  /* From nodewrap */
-  rb_require("nodewrap");
+  /* From ruby-internal */
+  rb_require("internal/node");
   DEFINE_FUNCTION_POINTER(wrap_node);
   DEFINE_FUNCTION_POINTER(unwrap_node);
   DEFINE_FUNCTION_POINTER(eval_ruby_node);
