@@ -769,13 +769,12 @@ class DEFS
       defn = function.const(JIT::Type::OBJECT, self.defn)
       set_source(function)
       function.rb_add_method(
-          recv,
+          klass,
           function.const(JIT::Type::ID, self.mid),
           function.unwrap_node(defn),
           function.const(JIT::Type::INT, 0)) # TODO: noex
     end
-    # no return value for definitions :(
-    return nil
+    return function.const(JIT::Type::OBJECT, nil)
   end
 end
 
@@ -791,8 +790,7 @@ class DEFN
           function.unwrap_node(defn),
           function.const(JIT::Type::INT, 0)) # TODO: noex
     end
-    # no return value for definitions :(
-    return nil
+    return function.const(JIT::Type::OBJECT, nil)
   end
 end
 
