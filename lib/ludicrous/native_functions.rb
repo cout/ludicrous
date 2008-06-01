@@ -659,7 +659,7 @@ class Function
 
   def rb_errinfo
     # TODO: this function could be inlined for better performance
-    fptr = Ludicrous::function_pointer_of(:rb_errinfo
+    fptr = Ludicrous::function_pointer_of(:rb_errinfo)
     signature = JIT::Type::create_signature(
         JIT::ABI::CDECL,
         JIT::Type::OBJECT,
