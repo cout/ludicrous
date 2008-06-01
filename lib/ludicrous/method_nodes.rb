@@ -191,6 +191,28 @@ class SCOPE
   end
 end
 
+class METHOD
+  def ludicrous_compile_into_function(origin_class, options = Ludicrous::Options.new)
+    # TODO
+    arg_names = []
+
+    signature = JIT::Type.create_signature(
+      JIT::ABI::CDECL,
+      JIT::Type::OBJECT,
+      [ JIT::Type::OBJECT ] * (1 + arg_names.size))
+
+    JIT::Context.build do |context|
+      function = JIT::Function.compile(context, signature) do |f|
+        # TODO: args
+        # TODO: body
+        # TODO: return value
+        result = f.const(JIT::Type::INT, Ludicrous::Qnil)
+        f.insn_return(result)
+      end
+    end
+  end
+end
+
 class CFUNC
   def ludicrous_compile(function, env)
     raise "Cannot jit-compile C function"
