@@ -78,7 +78,34 @@ static VALUE function_ruby_struct_member(
   return Data_Wrap_Struct(rb_cValue, 0, 0, result);
 }
 
-#ifndef RUBY_VM
+#ifdef RUBY_VM
+
+struct rb_thread_struct
+{
+    VALUE self;
+    void *vm;
+    VALUE *stack;
+    unsigned long stack_size;
+    VALUE *cfp;
+    /* ... */
+};
+
+typedef struct rb_thread_struct rb_thread_t;
+
+extern rb_thread_t * ruby_current_thread;
+
+/* TODO: This function is unnecessary if we use the opt_call_c_function
+ * instruction, which gives us cfp as a parameter.  I'm not sure if that
+ * would be faster or slower than this.
+ */
+static VALUE * * yarv_spp()
+{
+  VALUE * cfp = ruby_current_thread->cfp;
+  return (VALUE * *)&cfp[1];
+}
+
+#else
+
 /* Return a pointer to the current frame */
 static void * ruby_frame_()
 {
@@ -390,9 +417,14 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_gc_mark_locations);
   DEFINE_FUNCTION_POINTER(rb_method_boundp);
 
-#ifndef RUBY_VM
+#ifdef RUBY_VM
+
+  DEFINE_FUNCTION_POINTER(yarv_spp);
+
+#else
 
   DEFINE_FUNCTION_POINTER(rb_svar);
+
 #define ruby_frame ruby_frame_
   DEFINE_FUNCTION_POINTER(ruby_frame);
 #undef ruby_frame

@@ -643,6 +643,15 @@ class Function
     return insn_call_native(:rb_method_boundp, fptr, signature, 0, klass, id, ex)
   end
 
+  def yarv_spp
+    fptr = Ludicrous::function_pointer_of(:yarv_spp)
+    signature = JIT::Type::create_signature(
+        JIT::ABI::CDECL,
+        JIT::Type::VOID_PTR,
+        [ ])
+    return insn_call_native(:yarv_spp, fptr, signature, 0)
+  end
+
   def ruby_frame
     # TODO: this function could be inlined for better performance
     fptr = Ludicrous::function_pointer_of(:ruby_frame)

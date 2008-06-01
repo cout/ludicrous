@@ -76,16 +76,45 @@ class YarvEnvironment < Environment
   def initialize(function, options, cbase, scope)
     super(function, options, cbase, scope)
 
-    # TODO
-    @stack = function.rb_ary_new()
+    @spp = function.yarv_spp()
+    @sp = @function.insn_load_relative(@spp, 0, JIT::Type::VOID_PTR)
+  end
+
+  # Need to call this function whenever we call into ruby, because
+  # otherwise anything we put on the stack will be overwritten
+  def sync_sp
+    @function.insn_store_relative(@spp, 0, @sp)
+  end
+
+  def top
+    return topn(0)
+  end
+
+  def topn(idx)
+    return @function.insn_load_relative(@sp, idx, JIT::Type::OBJECT)
+  end
+
+  def top=(value)
+    @function.insn_store_relative(@sp, 0, value)
+  end
+
+  alias_method :set_top, :top=
+
+  def set_topn(idx, value)
+    @function.insn_store_relative(@sp, idx, JIT::Type::OBJECT, value)
   end
 
   def push(value)
-    @function.rb_ary_push(@stack, value)
+    @function.insn_store_relative(@sp, 0, value)
+    one = @function.const(JIT::Type::INT, 1)
+    @sp += one
   end
 
   def pop
-    return @function.rb_ary_pop(@stack)
+    one = @function.const(JIT::Type::INT, 1)
+    @sp -= one
+    top = @function.insn_load_relative(@sp, 0, JIT::Type::OBJECT)
+    return top
   end
 end
 
