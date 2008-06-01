@@ -19,6 +19,16 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, compile_and_run(foo.new, :foo)
   end
 
+  def test_add
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        return 1+1
+      end
+    end
+    assert_equal 2, compile_and_run(foo.new, :foo)
+  end
+
   def test_raise
     foo = Class.new do
       include Test::Unit::Assertions
