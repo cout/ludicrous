@@ -212,7 +212,7 @@ class METHOD
         f.optimization_level = options.optimization_level
 
         needs_addressable_scope = true # TODO
-        var_names = [] # TODO
+        var_names = self.body.local_table
 
         scope_type = needs_addressable_scope \
           ? Ludicrous::AddressableScope \
@@ -222,7 +222,8 @@ class METHOD
             f,
             options,
             origin_class,
-            scope)
+            scope,
+            self.body)
 
         # TODO: args
         # TODO: body

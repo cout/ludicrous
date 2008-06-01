@@ -7,21 +7,21 @@ class VM
     class PUTOBJECT
       def ludicrous_compile(function, env)
         value = function.const(JIT::Type::OBJECT, self.operands[0])
-        env.push(value)
+        env.stack.push(value)
       end
     end
 
     class LEAVE
       def ludicrous_compile(function, env)
-        retval = env.pop
+        retval = env.stack.pop
         function.insn_return(retval)
       end
     end
 
     class OPT_PLUS
       def ludicrous_compile(function, env)
-        rhs = env.pop
-        lhs = env.pop
+        rhs = env.stack.pop
+        lhs = env.stack.pop
 
         result = function.value(JIT::Type::OBJECT)
 
@@ -38,19 +38,19 @@ class VM
         } .end
 
         set_source(function)
-        env.sync_sp()
+        env.stack.sync_sp()
         result.store(function.rb_funcall(lhs, :+, rhs))
 
         function.insn_label(end_label)
 
-        env.push(result)
+        env.stack.push(result)
       end
     end
 
     class OPT_MINUS
       def ludicrous_compile(function, env)
-        rhs = env.pop
-        lhs = env.pop
+        rhs = env.stack.pop
+        lhs = env.stack.pop
 
         result = function.value(JIT::Type::OBJECT)
 
@@ -61,18 +61,39 @@ class VM
             # TODO: This optimization is only valid if Fixnum#+ has not
             # been redefined.  Fortunately, YARV gives us
             # ruby_vm_redefined_flag, which we can check.
-            env.sync_sp
+            env.stack.sync_sp
             function.insn_branch(end_label)
           } .end
         } .end
 
         set_source(function)
-        env.sync_sp()
+        env.stack.sync_sp()
         result.store(function.rb_funcall(lhs, :-, rhs))
 
         function.insn_label(end_label)
 
-        env.push(result)
+        env.stack.push(result)
+      end
+    end
+
+    class DUP
+      def ludicrous_compile(function, env)
+        env.stack.push(env.stack.top)
+      end
+    end
+
+    class SETLOCAL
+      def ludicrous_compile(function, env)
+        name = env.local_variable_name(@operands[0])
+        value = env.stack.pop
+        env.scope.local_set(name, value)
+      end
+    end
+
+    class GETLOCAL
+      def ludicrous_compile(function, env)
+        name = env.local_variable_name(@operands[0])
+        env.stack.push(env.scope.local_get(name))
       end
     end
   end

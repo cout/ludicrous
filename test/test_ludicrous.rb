@@ -39,6 +39,27 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 37, compile_and_run(foo.new, :foo)
   end
 
+  def test_local_variable_set
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        x = 1
+      end
+    end
+    assert_equal 1, compile_and_run(foo.new, :foo)
+  end
+
+  def test_local_variable_set_and_get
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        x = 1
+        return x
+      end
+    end
+    assert_equal 1, compile_and_run(foo.new, :foo)
+  end
+
   def test_raise
     foo = Class.new do
       include Test::Unit::Assertions

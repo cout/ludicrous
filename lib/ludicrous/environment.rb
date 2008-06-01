@@ -72,10 +72,9 @@ class Environment
   end
 end
 
-class YarvEnvironment < Environment
-  def initialize(function, options, cbase, scope)
-    super(function, options, cbase, scope)
-
+class YarvStack
+  def initialize(function)
+    @function = function
     @spp = function.yarv_spp()
     @sp = @function.insn_load_relative(@spp, 0, JIT::Type::VOID_PTR)
   end
@@ -117,6 +116,24 @@ class YarvEnvironment < Environment
   def popn(n)
     @sp.store(@function.insn_add_relative(@sp, n * JIT::Type::OBJECT.size))
     return nil
+  end
+
+end
+
+class YarvEnvironment < Environment
+  attr_reader :stack
+
+  def initialize(function, options, cbase, scope, iseq)
+    super(function, options, cbase, scope)
+
+    @iseq = iseq
+
+    @stack = YarvStack.new(function)
+  end
+
+  def local_variable_name(idx)
+    local_table_idx = @iseq.local_table.size - idx + 1
+    return @iseq.local_table[local_table_idx]
   end
 end
 
