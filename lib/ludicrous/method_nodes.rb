@@ -229,6 +229,7 @@ class METHOD
         # TODO: body
         # TODO: return value
         # result = f.const(JIT::Type::INT, Ludicrous::Qnil)
+        # puts self.body.disasm
         result = self.body.ludicrous_compile(f, env)
 
         # LEAVE instruction should generate return instruction

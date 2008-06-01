@@ -122,6 +122,7 @@ end
 
 class YarvEnvironment < Environment
   attr_reader :stack
+  attr_reader :offset
 
   def initialize(function, options, cbase, scope, iseq)
     super(function, options, cbase, scope)
@@ -129,11 +130,41 @@ class YarvEnvironment < Environment
     @iseq = iseq
 
     @stack = YarvStack.new(function)
+
+    @labels = {}
+    @offset = 0
   end
 
   def local_variable_name(idx)
     local_table_idx = @iseq.local_table.size - idx + 1
     return @iseq.local_table[local_table_idx]
+  end
+
+  def make_label
+    # TODO: we don't need to label every offset, only the ones that we
+    # might jump to
+    @labels[@offset] ||= JIT::Label.new
+    @function.insn_label(@labels[@offset])
+  end
+
+  def get_label(offset)
+    return @labels[offset]
+  end
+
+  def advance(instruction_length)
+    @offset += instruction_length
+  end
+
+  def branch(relative_offset)
+    offset = @offset + relative_offset
+    @labels[offset] ||= JIT::Label.new
+    @function.insn_branch(@labels[offset])
+  end
+
+  def branch_if(cond, relative_offset)
+    offset = @offset + relative_offset
+    @labels[offset] ||= JIT::Label.new
+    @function.insn_branch_if(cond, @labels[offset])
   end
 end
 

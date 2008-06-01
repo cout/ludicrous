@@ -9,7 +9,7 @@ class TestLudicrous < Test::Unit::TestCase
     f.apply(obj, *args)
   end
 
-  def test_simple
+  def test_return
     foo = Class.new do
       include Test::Unit::Assertions
       def foo
@@ -58,6 +58,20 @@ class TestLudicrous < Test::Unit::TestCase
       end
     end
     assert_equal 1, compile_and_run(foo.new, :foo)
+  end
+
+  def test_simple_while
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        x = 5
+        while x != 0
+          x -= 1
+        end
+        return x
+      end
+    end
+    assert_equal 0, compile_and_run(foo.new, :foo)
   end
 
   def test_raise
