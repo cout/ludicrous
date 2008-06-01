@@ -133,6 +133,12 @@ class Function
       [ JIT::Type::OBJECT, JIT::Type::OBJECT ])
 
   define_native_function(
+      :rb_ary_pop,
+      JIT::Type::OBJECT,
+      [ :array ],
+      [ JIT::Type::OBJECT ])
+
+  define_native_function(
       :rb_ary_store,
       JIT::Type::OBJECT,
       [ :array, :idx, :obj ],
