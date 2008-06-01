@@ -657,15 +657,17 @@ class Function
     return insn_call_native(:ruby_scope, fptr, signature, 0)
   end
 
-  def ruby_errinfo
+  def rb_errinfo
     # TODO: this function could be inlined for better performance
-    fptr = Ludicrous::function_pointer_of(:ruby_errinfo)
+    fptr = Ludicrous::function_pointer_of(:rb_errinfo
     signature = JIT::Type::create_signature(
         JIT::ABI::CDECL,
         JIT::Type::OBJECT,
         [ ])
-    return insn_call_native(:ruby_errinfo, fptr, signature, 0)
+    return insn_call_native(:rb_errinfo, fptr, signature, 0)
   end
+
+  alias_method :ruby_errinfo, :rb_errinfo
 
   def block_pass_fcall(recv, mid, args, proc)
     fptr = Ludicrous::function_pointer_of(:block_pass_fcall)

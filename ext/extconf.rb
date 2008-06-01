@@ -7,6 +7,39 @@ end
 
 require 'jit'
 
+have_func("rb_errinfo", "ruby.h")
+
+if have_struct_member("struct RObject", "iv_tbl", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_ROBJECT_IV_TBL"
+end
+
+if have_struct_member("struct RObject", "as", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_ROBJECT_AS"
+end
+
+if have_struct_member("struct RClass", "iv_tbl", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RCLASS_IV_TBL"
+end
+
+if have_struct_member("struct RFloat", "value", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RFLOAT_VALUE"
+end
+
+if have_struct_member("struct RString", "len", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RSTRING_LEN"
+end
+
+if have_struct_member("struct RString", "ptr", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RSTRING_PTR"
+end
+
+if have_struct_member("struct RHash", "tbl", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RHASH_TBL"
+end
+
+have_type("FRAME", [ "ruby.h", "env.h" ])
+have_type("SCOPE", [ "ruby.h", "env.h" ])
+
 rb_files = Dir['*.rb']
 rpp_files = Dir['*.rpp']
 generated_files = rpp_files.map { |f| f.sub(/\.rpp$/, '') }

@@ -1,8 +1,21 @@
 #include <jit/jit.h>
 #include <ruby.h>
+
+#ifdef RUBY_VM
+#include <ruby/node.h>
+#else
 #include <env.h>
 #include <node.h>
+#endif
+
 #include <rubyjit.h>
+
+#ifndef HAVE_RB_ERRINFO
+static VALUE rb_errinfo()
+{
+  return ruby_errinfo;
+}
+#endif
 
 /* Defined in ruby-internal */
 VALUE wrap_node(NODE * n);
@@ -21,6 +34,9 @@ struct Member_Info
 static VALUE name_to_function_pointer = Qnil;
 static VALUE struct_name_to_member_name_info = Qnil;
 
+/* Given a struct name, the name of a struct member, and a jit pointer,
+ * to the struct, return a jit pointer to the member within the struct.
+ */
 static VALUE function_ruby_struct_member(
     VALUE self, VALUE struct_name, VALUE member_name, VALUE ptr_v)
 {
@@ -62,11 +78,14 @@ static VALUE function_ruby_struct_member(
   return Data_Wrap_Struct(rb_cValue, 0, 0, result);
 }
 
+#ifndef RUBY_VM
+/* Return a pointer to the current frame */
 static void * ruby_frame_()
 {
   return ruby_frame;
 }
 
+/* Return a pointer to the current scope */
 static void * ruby_scope_()
 {
   return ruby_scope;
@@ -85,6 +104,7 @@ static VALUE ludicrous_splat_iterate_proc_(VALUE val)
 
   ID varname = rb_intern("ludicrous_splat_iterate_var");
 
+  /* Create a new scope */
   NEWOBJ(scope, struct SCOPE);
   OBJSETUP(scope, 0, T_SCOPE);
   scope->super = ruby_scope->super;
@@ -92,19 +112,28 @@ static VALUE ludicrous_splat_iterate_proc_(VALUE val)
   scope->local_vars = ALLOC_N(VALUE, 4);
   scope->flags = SCOPE_MALLOC;
 
+  /* Set the names of the scope's local variables */
   scope->local_tbl[0] = 3;
   scope->local_tbl[1] = '_';
   scope->local_tbl[2] = '~';
   scope->local_tbl[3] = varname;
 
+  /* And and their values */
   scope->local_vars[0] = 3;
   scope->local_vars[1] = Qnil;
   scope->local_vars[2] = Qnil;
   scope->local_vars[3] = Qnil;
   ++scope->local_vars;
 
+  scope->local_vars[0] = ruby_scope->local_vars[0]; /* $_ */
+  scope->local_vars[1] = ruby_scope->local_vars[1]; /* $~ */
+
+  /* Temporarily set ruby_scope to the new scope, so the proc being
+   * created below will pick it up (it will be set back when this
+   * function returns) */
   ruby_scope = scope;
 
+  /* Create a new proc */
   VALUE proc = rb_proc_new(
       data->body,
       data->val);
@@ -112,6 +141,8 @@ static VALUE ludicrous_splat_iterate_proc_(VALUE val)
   NODE * * var;
   Data_Get_Struct(proc, NODE *, var);
 
+  /* Set the iterator's assignment node to set a local variable that the
+   * iterator's body can retrieve */
   *var = NEW_MASGN(
       0,
       NEW_NODE(
@@ -120,6 +151,7 @@ static VALUE ludicrous_splat_iterate_proc_(VALUE val)
           0,
           2));
 
+  /* And return the proc */
   return proc;
 }
 
@@ -146,11 +178,7 @@ static VALUE ludicrous_splat_iterate_proc(
 
   return proc;
 }
-
-static VALUE ruby_errinfo_(VALUE self)
-{
-  return (VALUE)ruby_errinfo;
-}
+#endif
 
 static VALUE block_pass_fcall(VALUE recv, ID mid, VALUE args, VALUE proc)
 {
@@ -179,6 +207,8 @@ static VALUE block_pass_call(VALUE recv, ID mid, VALUE args, VALUE proc)
   return eval_ruby_node(node, recv, Qnil);
 }
 
+/* Emit jit instructions to set the current sourceline and sourcefile.
+ */
 static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 {
   NODE * n;
@@ -201,7 +231,9 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 
   c.type = jit_type_void_ptr;
   c.un.ptr_value = n;
+#ifndef RUBY_VM
   jit_value_t node = jit_value_create_constant(function, &c);
+#endif
 
   c.type = jit_type_void_ptr;
   c.un.ptr_value = &ruby_sourceline;
@@ -211,19 +243,25 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
   c.un.ptr_value = &ruby_sourcefile;
   jit_value_t ruby_sourcefile_ptr = jit_value_create_constant(function, &c);
 
+#ifndef RUBY_VM
   c.type = jit_type_void_ptr;
   c.un.ptr_value = &ruby_current_node;
   jit_value_t ruby_current_node_ptr = jit_value_create_constant(function, &c);
+#endif
 
   jit_insn_store_relative(function, ruby_sourceline_ptr, 0, line);
   jit_insn_store_relative(function, ruby_sourcefile_ptr, 0, file);
+#ifndef RUBY_VM
   jit_insn_store_relative(function, ruby_current_node_ptr, 0, node);
+#endif
 
   rb_ary_push(value_objects, node_v);
 
   return Qnil;
 }
 
+/* Given the name of a registered function, return a pointer to it.
+ */
 static VALUE function_pointer_of(VALUE klass, VALUE function_name)
 {
   VALUE v = rb_hash_aref(name_to_function_pointer, function_name);
@@ -240,6 +278,9 @@ static VALUE function_pointer_of(VALUE klass, VALUE function_name)
   return v;
 }
 
+/* Register a struct member (to be used later by the
+ * DEFINE_RUBY_STRUCT_MEMBER macro).
+ */
 static void add_member_info(
     char const * struct_name,
     char const * member_name,
@@ -335,7 +376,6 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_gvar_defined);
   DEFINE_FUNCTION_POINTER(rb_global_entry);
   DEFINE_FUNCTION_POINTER(rb_id2name);
-  DEFINE_FUNCTION_POINTER(rb_svar);
   DEFINE_FUNCTION_POINTER(rb_reg_nth_match);
   DEFINE_FUNCTION_POINTER(rb_reg_match);
   DEFINE_FUNCTION_POINTER(rb_reg_match2);
@@ -350,6 +390,9 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_gc_mark_locations);
   DEFINE_FUNCTION_POINTER(rb_method_boundp);
 
+#ifndef RUBY_VM
+
+  DEFINE_FUNCTION_POINTER(rb_svar);
 #define ruby_frame ruby_frame_
   DEFINE_FUNCTION_POINTER(ruby_frame);
 #undef ruby_frame
@@ -358,13 +401,14 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(ruby_scope);
 #undef ruby_scope
 
-#define ruby_errinfo ruby_errinfo_
-  DEFINE_FUNCTION_POINTER(ruby_errinfo);
-#undef ruby_errinfo
+  DEFINE_FUNCTION_POINTER(ludicrous_splat_iterate_proc);
+
+#endif
+
+  DEFINE_FUNCTION_POINTER(rb_errinfo);
 
   DEFINE_FUNCTION_POINTER(block_pass_fcall);
   DEFINE_FUNCTION_POINTER(block_pass_call);
-  DEFINE_FUNCTION_POINTER(ludicrous_splat_iterate_proc);
 
   DEFINE_FUNCTION_POINTER(rb_node_newnode);
 
@@ -385,17 +429,31 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(RBasic, flags, jit_type_uint);
   DEFINE_RUBY_STRUCT_MEMBER(RBasic, klass, jit_type_uint);
 
+#ifdef HAVE_ST_ROBJECT_IV_TBL
   DEFINE_RUBY_STRUCT_MEMBER(RObject, iv_tbl, jit_type_void_ptr);
+#endif
 
+#ifdef HAVE_ST_RCLASS_IV_TBL
   DEFINE_RUBY_STRUCT_MEMBER(RClass, iv_tbl, jit_type_void_ptr);
+#endif
+
   DEFINE_RUBY_STRUCT_MEMBER(RClass, m_tbl, jit_type_void_ptr);
+
+#ifdef HAVE_ST_RCLASS_SUPER
   DEFINE_RUBY_STRUCT_MEMBER(RClass, super, jit_type_uint);
+#endif
 
+#ifdef HAVE_ST_RFLOAT_VALUE
   DEFINE_RUBY_STRUCT_MEMBER(RFloat, value, jit_type_uint);
-  DEFINE_RUBY_STRUCT_MEMBER(RFloat, value, jit_type_uint);
+#endif
 
+#ifdef HAVE_ST_RSTRING_LEN
   DEFINE_RUBY_STRUCT_MEMBER(RString, len, jit_type_uint);
+#endif
+
+#ifdef HAVE_ST_RSTRING_PTR
   DEFINE_RUBY_STRUCT_MEMBER(RString, ptr, jit_type_void_ptr);
+#endif
   // TODO: capa, shared
 
   DEFINE_RUBY_STRUCT_MEMBER(RArray, len, jit_type_int);
@@ -406,7 +464,9 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, len, jit_type_uint);
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, str, jit_type_void_ptr);
 
+#ifdef HAVE_ST_RHASH_TBL
   DEFINE_RUBY_STRUCT_MEMBER(RHash, tbl, jit_type_void_ptr);
+#endif
   DEFINE_RUBY_STRUCT_MEMBER(RHash, iter_lev, jit_type_int);
   DEFINE_RUBY_STRUCT_MEMBER(RHash, ifnone, jit_type_uint);
 
@@ -416,6 +476,7 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(RData, dfree, jit_type_void_ptr); // TODO: function ptr
   DEFINE_RUBY_STRUCT_MEMBER(RData, data, jit_type_void_ptr);
 
+#ifdef HAVE_TYPE_FRAME
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, self, jit_type_uint);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, argc, jit_type_int);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, last_func, jit_type_uint);
@@ -427,10 +488,13 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, iter, jit_type_int);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, flags, jit_type_int);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, uniq, jit_type_uint);
+#endif
 
+#ifdef HAVE_TYPE_SCOPE
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_tbl, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_vars, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, flags, jit_type_int);
+#endif
 
   rb_define_const(rb_mLudicrous, "Qundef", UINT2NUM(Qundef));
   rb_define_const(rb_mLudicrous, "Qnil", UINT2NUM(Qnil));
