@@ -219,6 +219,7 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 
   VALUE value_objects = (VALUE)jit_function_get_meta(function, RJT_VALUE_OBJECTS);
 
+#ifndef RUBY_VM
   jit_constant_t c;
 
   c.type = jit_type_int;
@@ -231,9 +232,7 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 
   c.type = jit_type_void_ptr;
   c.un.ptr_value = n;
-#ifndef RUBY_VM
   jit_value_t node = jit_value_create_constant(function, &c);
-#endif
 
   c.type = jit_type_void_ptr;
   c.un.ptr_value = &ruby_sourceline;
@@ -243,16 +242,16 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
   c.un.ptr_value = &ruby_sourcefile;
   jit_value_t ruby_sourcefile_ptr = jit_value_create_constant(function, &c);
 
-#ifndef RUBY_VM
   c.type = jit_type_void_ptr;
   c.un.ptr_value = &ruby_current_node;
   jit_value_t ruby_current_node_ptr = jit_value_create_constant(function, &c);
-#endif
 
   jit_insn_store_relative(function, ruby_sourceline_ptr, 0, line);
   jit_insn_store_relative(function, ruby_sourcefile_ptr, 0, file);
-#ifndef RUBY_VM
   jit_insn_store_relative(function, ruby_current_node_ptr, 0, node);
+
+#else
+  /* TODO: Not sure what to do on 1.9 yet */
 #endif
 
   rb_ary_push(value_objects, node_v);
