@@ -507,6 +507,24 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal(42, o.foo)
     assert_equal(1, $test_call_jit_stub_in_base_class__derived_foo_called)
   end
+
+  def test_match_data_is_local_to_method
+    c = Class.new do
+      include Test::Unit::Assertions
+
+      def foo
+        "foo" =~ /(foo)/
+        assert_not_equal nil, $~
+      end
+
+      go_plaid
+    end
+
+    assert_equal nil, $~
+    o = c.new
+    o.foo
+    assert_equal nil, $~
+  end
 end
 
 if __FILE__ == $0 then
