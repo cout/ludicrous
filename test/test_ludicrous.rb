@@ -19,7 +19,7 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, compile_and_run(foo.new, :foo)
   end
 
-  def test_add
+  def test_add_fixnums
     foo = Class.new do
       include Test::Unit::Assertions
       def foo
@@ -27,6 +27,16 @@ class TestLudicrous < Test::Unit::TestCase
       end
     end
     assert_equal 2, compile_and_run(foo.new, :foo)
+  end
+
+  def test_subtract_fixnums
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        return 42 - 5
+      end
+    end
+    assert_equal 37, compile_and_run(foo.new, :foo)
   end
 
   def test_raise

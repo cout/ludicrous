@@ -20,7 +20,6 @@ class VM
 
     class OPT_PLUS
       def ludicrous_compile(function, env)
-        # TODO: not sure about the order I need to pop in
         rhs = env.pop
         lhs = env.pop
 
@@ -41,6 +40,35 @@ class VM
         set_source(function)
         env.sync_sp()
         result.store(function.rb_funcall(lhs, :+, rhs))
+
+        function.insn_label(end_label)
+
+        env.push(result)
+      end
+    end
+
+    class OPT_MINUS
+      def ludicrous_compile(function, env)
+        rhs = env.pop
+        lhs = env.pop
+
+        result = function.value(JIT::Type::OBJECT)
+
+        end_label = JIT::Label.new
+
+        function.if(lhs.is_fixnum) {
+          function.if(rhs.is_fixnum) {
+            # TODO: This optimization is only valid if Fixnum#+ has not
+            # been redefined.  Fortunately, YARV gives us
+            # ruby_vm_redefined_flag, which we can check.
+            env.sync_sp
+            function.insn_branch(end_label)
+          } .end
+        } .end
+
+        set_source(function)
+        env.sync_sp()
+        result.store(function.rb_funcall(lhs, :-, rhs))
 
         function.insn_label(end_label)
 
