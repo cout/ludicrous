@@ -91,7 +91,7 @@ class YarvEnvironment < Environment
   end
 
   def topn(idx)
-    return @function.insn_load_relative(@sp, idx, JIT::Type::OBJECT)
+    return @function.insn_load_relative(@sp, -idx, JIT::Type::OBJECT)
   end
 
   def top=(value)
@@ -101,20 +101,22 @@ class YarvEnvironment < Environment
   alias_method :set_top, :top=
 
   def set_topn(idx, value)
-    @function.insn_store_relative(@sp, idx, JIT::Type::OBJECT, value)
+    @function.insn_store_relative(@sp, -idx, JIT::Type::OBJECT, value)
   end
 
   def push(value)
     @function.insn_store_relative(@sp, 0, value)
-    one = @function.const(JIT::Type::INT, 1)
-    @sp += one
+    popn(-1)
   end
 
   def pop
-    one = @function.const(JIT::Type::INT, 1)
-    @sp -= one
-    top = @function.insn_load_relative(@sp, 0, JIT::Type::OBJECT)
+    popn(1)
     return top
+  end
+
+  def popn(n)
+    @sp.store(@function.insn_add_relative(@sp, n * JIT::Type::OBJECT.size))
+    return nil
   end
 end
 
