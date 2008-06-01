@@ -9,6 +9,16 @@ class TestLudicrous < Test::Unit::TestCase
     f.apply(obj, *args)
   end
 
+  def test_simple
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        return 42
+      end
+    end
+    assert_equal 42, compile_and_run(foo.new, :foo)
+  end
+
   def test_raise
     foo = Class.new do
       include Test::Unit::Assertions

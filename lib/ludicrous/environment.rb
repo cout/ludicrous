@@ -72,5 +72,22 @@ class Environment
   end
 end
 
+class YarvEnvironment < Environment
+  def initialize(function, options, cbase, scope)
+    super(function, options, cbase, scope)
+
+    # TODO
+    @stack = function.rb_ary_new()
+  end
+
+  def push(value)
+    @function.rb_ary_push(@stack, value)
+  end
+
+  def pop
+    return @function.rb_ary_pop(@stack)
+  end
+end
+
 end # Ludicrous
 

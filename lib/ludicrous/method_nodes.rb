@@ -1,3 +1,6 @@
+require 'internal/method/signature'
+require 'internal/proc/signature'
+
 class Node
 
 def ludicrous_scope_info
@@ -193,6 +196,9 @@ end
 
 class METHOD
   def ludicrous_compile_into_function(origin_class, options = Ludicrous::Options.new)
+    # p self
+    # p self.argument_names
+
     # TODO
     arg_names = []
 
@@ -203,11 +209,28 @@ class METHOD
 
     JIT::Context.build do |context|
       function = JIT::Function.compile(context, signature) do |f|
+        f.optimization_level = options.optimization_level
+
+        needs_addressable_scope = true # TODO
+        var_names = [] # TODO
+
+        scope_type = needs_addressable_scope \
+          ? Ludicrous::AddressableScope \
+          : Ludicrous::Scope
+        scope = scope_type.new(f, var_names)
+        env = Ludicrous::YarvEnvironment.new(
+            f,
+            options,
+            origin_class,
+            scope)
+
         # TODO: args
         # TODO: body
         # TODO: return value
-        result = f.const(JIT::Type::INT, Ludicrous::Qnil)
-        f.insn_return(result)
+        # result = f.const(JIT::Type::INT, Ludicrous::Qnil)
+        result = self.body.ludicrous_compile(f, env)
+
+        # LEAVE instruction should generate return instruction
       end
     end
   end
