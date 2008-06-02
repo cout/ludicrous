@@ -13,16 +13,24 @@ require 'ludicrous.so'
 
 require 'ludicrous/value_conversions'
 require 'ludicrous/native_functions'
-require 'ludicrous/eval_nodes'
 require 'ludicrous/method_nodes'
-require 'ludicrous/iseq'
-require 'ludicrous/instructions'
 require 'ludicrous/logger'
 require 'ludicrous/local_variable'
 require 'ludicrous/scope'
 require 'ludicrous/environment'
 require 'ludicrous/options'
 require 'ludicrous/debug_output'
+
+if defined?(VM) then
+require 'ludicrous/iseq'
+require 'ludicrous/instructions'
+else
+require 'ludicrous/eval_nodes'
+end
+
+class Mutex
+  LUDICROUS_DONT_COMPILE = true
+end
 
 module Ludicrous
 
@@ -102,6 +110,7 @@ module JITCompiled
       end
       compiled
     }
+    return compile_proc
   end
 
   def self.jit_stub(klass, name, orig_name, method)
@@ -178,6 +187,7 @@ module JITCompiled
 
         # puts f.dump
       end
+      # puts "done"
     end
   end
 
@@ -188,6 +198,11 @@ module JITCompiled
     return if name =~ /^ludicrous__tmp__/
 
     return if klass.const_defined?("HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}")
+
+    if klass.ludicrous_dont_compile then
+      Ludicrous.logger.info("Not compiling #{klass}")
+      return
+    end
 
     begin
       method = klass.instance_method(name)
@@ -227,6 +242,11 @@ module JITCompiled
   end
 
   def self.append_features(mod)
+    if mod.ludicrous_dont_compile then
+      Ludicrous.logger.info("Not compiling #{mod}")
+      return
+    end
+
     # TODO: not sure if this is necessary, but it can't hurt...
     if mod.instance_eval { defined?(@LUDICROUS_FEATURES_APPENDED) } then
       Ludicrous.logger.info("#{mod} is already JIT-compiled")
@@ -256,6 +276,11 @@ module JITCompiled
   end
 
   def self.jit_precompile_all_instance_methods(mod)
+    if mod.ludicrous_dont_compile then
+      Ludicrous.logger.info("Not compiling #{mod}")
+      return
+    end
+
     instance_methods = mod.public_instance_methods(false) + \
       mod.protected_instance_methods(false) + \
       mod.private_instance_methods(false)
@@ -265,6 +290,11 @@ module JITCompiled
   end
 
   def self.install_jit_stubs_for_all_instance_methods(mod)
+    if mod.ludicrous_dont_compile then
+      Ludicrous.logger.info("Not compiling #{mod}")
+      return
+    end
+
     instance_methods = mod.public_instance_methods(false) + \
       mod.protected_instance_methods(false) + \
       mod.private_instance_methods(false)
@@ -274,6 +304,11 @@ module JITCompiled
   end
 
   def self.install_method_added_jit_hook(mod)
+    if mod.ludicrous_dont_compile then
+      Ludicrous.logger.info("Not compiling #{mod}")
+      return
+    end
+
     Ludicrous.logger.info "Installing method_added hook for #{mod}"
     mod_singleton_class = class << mod; self; end
     mod_singleton_class.instance_eval do
@@ -309,10 +344,21 @@ class Module
   def ludicrous_compile_method(name)
     Ludicrous::Speed.jit_compile_method(self, name)
   end
+
+  def ludicrous_dont_compile
+    return (self.const_defined?(:LUDICROUS_DONT_COMPILE) or
+       (self.const_defined?(:LUDICROUS_OPTIONS) and
+       self::LUDICROUS_OPTIONS.dont_compile))
+  end
 end
 
 class Method
   def ludicrous_compile(options = Ludicrous::Options.new)
+    if options.dont_compile then
+      Ludicrous.logger.info("Not compiling #{self}")
+      return
+    end
+
     return self.body.ludicrous_compile_into_function(
         self.attached_class || self.origin_class,
         options)
@@ -321,6 +367,11 @@ end
 
 class UnboundMethod
   def ludicrous_compile(options = Ludicrous::Options.new)
+    if options.dont_compile then
+      Ludicrous.logger.info("Not compiling #{self}")
+      return
+    end
+
     return self.body.ludicrous_compile_into_function(
         self.origin_class,
         options)
