@@ -54,7 +54,7 @@ module JITCompiled
     # Remove the aliased methods
     klass.__send__(:remove_method, tmp_name)
     klass.__send__(:remove_method, orig_name)
-    klass.__send__(:remove_const, "HAVE_LUDICROUS_JIT_STUB__#{name.intern.to_i}")
+    klass.__send__(:remove_const, "HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}")
   end
 
   def self.jit_compile_method(
@@ -187,7 +187,7 @@ module JITCompiled
     return if name =~ /^ludicrous__stub_tmp__/
     return if name =~ /^ludicrous__tmp__/
 
-    return if klass.const_defined?("HAVE_LUDICROUS_JIT_STUB__#{name.intern.to_i}")
+    return if klass.const_defined?("HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}")
 
     begin
       method = klass.instance_method(name)
@@ -219,7 +219,7 @@ module JITCompiled
       begin
         stub = Ludicrous::JITCompiled.jit_stub(klass, name, tmp_name, method)
         klass.define_jit_method(name, stub)
-        klass.const_set("HAVE_LUDICROUS_JIT_STUB__#{name.intern.to_i}", true)
+        klass.const_set("HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}", true)
       rescue
         Ludicrous.logger.error "#{klass}##{name} failed: #{$!.class}: #{$!} (#{$!.backtrace[0]})"
       end
