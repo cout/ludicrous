@@ -1,3 +1,5 @@
+require 'internal/vm/constants'
+
 class VM
   class Instruction
     def set_source(function)
@@ -8,6 +10,13 @@ class VM
       def ludicrous_compile(function, env)
         value = function.const(JIT::Type::OBJECT, self.operands[0])
         env.stack.push(value)
+      end
+    end
+
+    class PUTSTRING
+      def ludicrous_compile(function, env)
+        str = function.const(JIT::Type::OBJECT, self.operands[0])
+        env.stack.push(function.rb_str_dup(str))
       end
     end
 
@@ -150,6 +159,39 @@ class VM
         relative_offset = @operands[0]
         val = env.stack.pop
         env.branch_if(val.rtest, relative_offset)
+      end
+    end
+
+    class SEND
+      def ludicrous_compile(function, env)
+        mid = @operands[0]
+        argc = @operands[1]
+        flags = @operands[2]
+        ic = @operands[3]
+
+        if flags & VM::CALL_ARGS_BLOCKARG_BIT then
+          raise "Block arg not supported"
+        end
+
+        if flags & VM::CALL_ARGS_SPLAT_BIT then
+          raise "Splat not supported"
+        end
+
+        if flags & VM::CALL_VCALL_BIT then
+          raise "Vcall not supported"
+        end
+
+        args = (1..argc).collect { env.stack.pop }
+
+        if flags & VM::CALL_FCALL_BIT then
+          recv = env.self
+        else
+          recv = env.stack.pop
+        end
+
+        # TODO: pull in optimizations from eval_nodes.rb
+        result = function.rb_funcall(recv, mid, *args)
+        env.stack.push(result)
       end
     end
   end
