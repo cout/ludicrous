@@ -85,34 +85,45 @@ class YarvStack
     @function.insn_store_relative(@spp, 0, @sp)
   end
 
+  # Get the top member of the stack
   def top
     return topn(0)
   end
 
+  # Get the nth member from the top of the stack
   def topn(idx)
     return @function.insn_load_relative(@sp, -idx, JIT::Type::OBJECT)
   end
 
+  # Assign to the top member of the stack
   def top=(value)
     @function.insn_store_relative(@sp, 0, value)
   end
 
   alias_method :set_top, :top=
 
+  # Assign to the nth member from the top of the stack
   def set_topn(idx, value)
     @function.insn_store_relative(@sp, -idx, JIT::Type::OBJECT, value)
   end
 
+  # Push a new value to the top of the stack
   def push(value)
+    # Assign to the top of the stack
     @function.insn_store_relative(@sp, 0, value)
+
+    # And set the new stack pointer
     popn(-1)
   end
 
+  # Pop a value from the top of the stack and return it
   def pop
     popn(1)
     return top
   end
 
+  # Pop n members from the top of the stack (optimization for the case
+  # where we don't actually need those values)
   def popn(n)
     @sp.store(@function.insn_add_relative(@sp, n * JIT::Type::OBJECT.size))
     return nil
