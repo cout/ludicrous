@@ -13,16 +13,22 @@ require 'ludicrous.so'
 
 require 'ludicrous/value_conversions'
 require 'ludicrous/native_functions'
-require 'ludicrous/eval_nodes'
 require 'ludicrous/method_nodes'
 require 'ludicrous/iseq'
-require 'ludicrous/instructions'
 require 'ludicrous/logger'
 require 'ludicrous/local_variable'
 require 'ludicrous/scope'
 require 'ludicrous/environment'
 require 'ludicrous/options'
 require 'ludicrous/debug_output'
+
+if defined?(VM) then
+# >= 1.9
+require 'ludicrous/instructions'
+else
+# <= 1.8
+require 'ludicrous/eval_nodes'
+end
 
 module Ludicrous
 
