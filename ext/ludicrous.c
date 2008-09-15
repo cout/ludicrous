@@ -209,6 +209,18 @@ static VALUE ludicrous_splat_iterate_proc(
 
 static VALUE block_pass_fcall(VALUE recv, ID mid, VALUE args, VALUE proc)
 {
+#ifdef RUBY_VM
+  /* TODO: need to set filename on node for 1.9 */
+  /* TODO: would be better to construct an iseq directly */
+  NODE * node = NEW_FCALL(
+      mid,
+      NEW_NODE(
+          NODE_BLOCK_PASS,
+          NEW_SPLAT(
+              NEW_LIT(args)),
+          NEW_LIT(proc),
+          0));
+#else
   NODE * node = NEW_NODE(
       NODE_BLOCK_PASS,
       0,
@@ -217,11 +229,13 @@ static VALUE block_pass_fcall(VALUE recv, ID mid, VALUE args, VALUE proc)
           mid,
           NEW_SPLAT(
               NEW_LIT(args))));
+#endif
   return eval_ruby_node(node, recv, Qnil);
 }
 
 static VALUE block_pass_call(VALUE recv, ID mid, VALUE args, VALUE proc)
 {
+  /* TODO: need to set filename on node for 1.9 */
   NODE * node = NEW_NODE(
       NODE_BLOCK_PASS,
       0,
