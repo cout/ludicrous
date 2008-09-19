@@ -14,7 +14,6 @@ require 'ludicrous.so'
 require 'ludicrous/value_conversions'
 require 'ludicrous/native_functions'
 require 'ludicrous/method_nodes'
-require 'ludicrous/iseq'
 require 'ludicrous/logger'
 require 'ludicrous/local_variable'
 require 'ludicrous/scope'
@@ -24,7 +23,8 @@ require 'ludicrous/debug_output'
 
 if defined?(VM) then
 # >= 1.9
-require 'ludicrous/instructions'
+require 'ludicrous/yarv_instructions'
+require 'ludicrous/yarv_iseq'
 else
 # <= 1.8
 require 'ludicrous/eval_nodes'
