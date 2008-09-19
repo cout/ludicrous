@@ -267,6 +267,11 @@ class VM
       end
     end
 
+    class NOP
+      def ludicrous_compile(function, env)
+      end
+    end
+
   end
 end
 
