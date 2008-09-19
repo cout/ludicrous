@@ -1,11 +1,11 @@
 module Ludicrous
 
-OptionsMembers = Struct.new(
+CompileOptionsMembers = Struct.new(
     :optimization_level,
     :precompile,
     :iterate_style)
 
-class Options < OptionsMembers
+class CompileOptions < CompileOptionsMembers
   def initialize(h = {})
     self.precompile = false
     self.optimization_level = 2

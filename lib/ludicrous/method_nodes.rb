@@ -44,7 +44,9 @@ def ludicrous_scope_info
   return needs_addressable_scope, vars
 end
 
-def ludicrous_compile_toplevel(toplevel_self, options = Ludicrous::Options.new)
+def ludicrous_compile_toplevel(
+    toplevel_self,
+    options = Ludicrous::CompileOptions.new)
   signature = JIT::Type.create_signature(
     JIT::ABI::CDECL,
     JIT::Type::OBJECT,
@@ -84,7 +86,9 @@ def ludicrous_compile_toplevel(toplevel_self, options = Ludicrous::Options.new)
 end
 
 class SCOPE
-  def ludicrous_compile_into_function(origin_class, options = Ludicrous::Options.new)
+  def ludicrous_compile_into_function(
+      origin_class,
+      options = Ludicrous::CompileOptions.new)
     arg_names = self.argument_names
     args = self.arguments
 
@@ -195,7 +199,9 @@ class SCOPE
 end
 
 class METHOD
-  def ludicrous_compile_into_function(origin_class, options = Ludicrous::Options.new)
+  def ludicrous_compile_into_function(
+      origin_class,
+      options = Ludicrous::CompileOptions.new)
     # p self
     # p self.argument_names
 
@@ -225,6 +231,9 @@ class METHOD
             scope,
             self.body)
 
+        # TODO: not always valid
+        env.scope.self = f.get_param(0)
+
         # TODO: args
         # TODO: body
         # TODO: return value
@@ -238,8 +247,18 @@ class METHOD
   end
 end
 
+class IVAR
+  def ludicrous_compile_into_function(
+      origin_class,
+      options = Ludicrous::CompileOptions.new)
+    raise "Not JIT-compiling IVAR (would be slower)"
+  end
+end
+
 class CFUNC
-  def ludicrous_compile(function, env)
+  def ludicrous_compile_into_function(
+      origin_class,
+      options = Ludicrous::CompileOptions.new)
     raise "Cannot jit-compile C function"
   end
 end

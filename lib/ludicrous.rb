@@ -18,7 +18,7 @@ require 'ludicrous/logger'
 require 'ludicrous/local_variable'
 require 'ludicrous/scope'
 require 'ludicrous/environment'
-require 'ludicrous/options'
+require 'ludicrous/compile_options'
 require 'ludicrous/debug_output'
 
 if defined?(VM) then
@@ -298,7 +298,7 @@ Speed = JITCompiled
 end # module Ludicrous
 
 class Module
-  def ludicrous_compile(options = Ludicrous::Options.new)
+  def ludicrous_compile(options = Ludicrous::CompileOptions.new)
     return if defined?(@LUDICROUS_FEATURES_APPENDED)
 
     module_has_options = self.const_defined?(:LUDICROUS_OPTIONS)
@@ -318,7 +318,7 @@ class Module
 end
 
 class Method
-  def ludicrous_compile(options = Ludicrous::Options.new)
+  def ludicrous_compile(options = Ludicrous::CompileOptions.new)
     return self.body.ludicrous_compile_into_function(
         self.attached_class || self.origin_class,
         options)
@@ -326,7 +326,7 @@ class Method
 end
 
 class UnboundMethod
-  def ludicrous_compile(options = Ludicrous::Options.new)
+  def ludicrous_compile(options = Ludicrous::CompileOptions.new)
     return self.body.ludicrous_compile_into_function(
         self.origin_class,
         options)
