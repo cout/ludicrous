@@ -251,6 +251,14 @@ class VM
         env.stack.push(result)
       end
     end
+
+    class GETINLINECACHE
+      def ludicrous_compile(function, env)
+        # ignore, for now
+        env.stack.push(function.const(JIT::Type::OBJECT, nil))
+      end
+    end
+
   end
 end
 
