@@ -26,6 +26,12 @@ class VM
       end
     end
 
+    class PUTSELF
+      def ludicrous_compile(function, env)
+        env.stack.push(env.scope.self)
+      end
+    end
+
     class LEAVE
       def ludicrous_compile(function, env)
         retval = env.stack.pop
@@ -126,9 +132,58 @@ class VM
       end
     end
 
+    class DUPARRAY
+      def ludicrous_compile(function, env)
+        ary = @operands[0]
+        env.stack.sync_sp()
+        ary = function.rb_ary_dup(ary)
+        env.stack.push(ary)
+      end
+    end
+
+    class SPLATARRAY
+      def ludicrous_compile(function, env)
+        ary = env.stack.pop
+        env.stack.sync_sp()
+        env.stack.push(ary.splat)
+      end
+    end
+
+    class NEWARRAY
+      def ludicrous_compile(function, env)
+        # TODO: possible to optimize this
+        num = @operands[0]
+        env.stack.sync_sp()
+        ary = function.rb_ary_new2(num)
+        num.times do
+          env.stack.sync_sp
+          function.rb_ary_push(ary, env.stack.pop)
+        end
+        env.stack.push(ary)
+      end
+    end
+
+    class CONCATARRAY
+      def ludicrous_compile(function, env)
+        ary1 = env.stack.pop
+        ary2 = env.stack.pop
+        tmp1 = ary1.splat
+        tmp2 = ary2.splat
+        env.stack.sync_sp()
+        env.stack.push(function.rb_ary_concat(tmp1, tmp2))
+      end
+    end
+
     class POP
       def ludicrous_compile(function, env)
         env.stack.pop
+      end
+    end
+
+    class SETN
+      def ludicrous_compile(function, env)
+        n = @operands[0]
+        env.stack.setn(n, env.stack.pop)
       end
     end
 
@@ -166,30 +221,32 @@ class VM
       def ludicrous_compile(function, env)
         mid = @operands[0]
         argc = @operands[1]
-        flags = @operands[2]
-        ic = @operands[3]
+        blockiseq = @operands[2]
+        flags = @operands[3]
+        ic = @operands[4]
 
-        if flags & VM::CALL_ARGS_BLOCKARG_BIT then
+        if flags & VM::CALL_ARGS_BLOCKARG_BIT != 0 then
           raise "Block arg not supported"
         end
 
-        if flags & VM::CALL_ARGS_SPLAT_BIT then
+        if flags & VM::CALL_ARGS_SPLAT_BIT != 0 then
           raise "Splat not supported"
         end
 
-        if flags & VM::CALL_VCALL_BIT then
+        if flags & VM::CALL_VCALL_BIT != 0 then
           raise "Vcall not supported"
         end
 
         args = (1..argc).collect { env.stack.pop }
 
-        if flags & VM::CALL_FCALL_BIT then
-          recv = env.self
+        if flags & VM::CALL_FCALL_BIT != 0 then
+          recv = env.scope.self
         else
           recv = env.stack.pop
         end
 
         # TODO: pull in optimizations from eval_nodes.rb
+        env.stack.sync_sp()
         result = function.rb_funcall(recv, mid, *args)
         env.stack.push(result)
       end
