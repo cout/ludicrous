@@ -217,6 +217,14 @@ class VM
       end
     end
 
+    class BRANCHUNLESS
+      def ludicrous_compile(function, env)
+        relative_offset = @operands[0]
+        val = env.stack.pop
+        env.branch_unless(val.rtest, relative_offset)
+      end
+    end
+
     class SEND
       def ludicrous_compile(function, env)
         mid = @operands[0]
