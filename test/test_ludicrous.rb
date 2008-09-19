@@ -414,6 +414,30 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, result
   end
 
+  def test_assign_array
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        a = 1, 2, 3
+        a
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal [1, 2, 3], result
+  end
+
+  def test_self
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def foo
+        self
+      end
+    end
+    obj = foo.new
+    result = compile_and_run(obj, :foo)
+    assert_equal obj, result
+  end
+
   def test_argspush
     foo = Class.new do
       include Test::Unit::Assertions
@@ -424,13 +448,13 @@ class TestLudicrous < Test::Unit::TestCase
       end
 
       def []=(*args)
-        @args = args
+        @foo = args
       end
 
       attr_reader :foo
     end
     obj = foo.new
-    compile_and_run(obj, :foo)
+    compile_and_run(obj, :args)
 
     assert_equal([4, 5, 1, 2, 3, 6], obj.foo)
   end
