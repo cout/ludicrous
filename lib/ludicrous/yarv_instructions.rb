@@ -39,90 +39,69 @@ class VM
       end
     end
 
+    def ludicrous_compile_binary_op(args)
+      function = args[:function]
+      env = args[:env]
+      operator = args[:operator]
+      fixnum_proc = args[:fixnum]
+
+      rhs = env.stack.pop
+      lhs = env.stack.pop
+
+      result = function.value(JIT::Type::OBJECT)
+
+      end_label = JIT::Label.new
+
+      function.if(lhs.is_fixnum & rhs.is_fixnum) {
+        # TODO: This optimization is only valid if Fixnum#+ has not
+        # been redefined.  Fortunately, YARV gives us
+        # ruby_vm_redefined_flag, which we can check.
+        result.store(fixnum_proc.call(lhs, rhs))
+        function.insn_branch(end_label)
+      } .end
+
+      set_source(function)
+      env.stack.sync_sp()
+      result.store(function.rb_funcall(lhs, operator, rhs))
+
+      function.insn_label(end_label)
+
+      env.stack.push(result)
+    end
+
     class OPT_PLUS
       def ludicrous_compile(function, env)
-        rhs = env.stack.pop
-        lhs = env.stack.pop
-
-        result = function.value(JIT::Type::OBJECT)
-
-        end_label = JIT::Label.new
-
-        function.if(lhs.is_fixnum) {
-          function.if(rhs.is_fixnum) {
-            # TODO: This optimization is only valid if Fixnum#+ has not
-            # been redefined.  Fortunately, YARV gives us
-            # ruby_vm_redefined_flag, which we can check.
-            result.store(lhs + (rhs & function.const(JIT::Type::INT, ~1)))
-            function.insn_branch(end_label)
-          } .end
-        } .end
-
-        set_source(function)
-        env.stack.sync_sp()
-        result.store(function.rb_funcall(lhs, :+, rhs))
-
-        function.insn_label(end_label)
-
-        env.stack.push(result)
+        ludicrous_compile_binary_op(
+            :function => function,
+            :env      => env,
+            :operator => :+,
+            :fixnum   => proc { |lhs, rhs|
+              lhs + (rhs & function.const(JIT::Type::INT, ~1)) }
+            )
       end
     end
 
     class OPT_MINUS
       def ludicrous_compile(function, env)
-        rhs = env.stack.pop
-        lhs = env.stack.pop
-
-        result = function.value(JIT::Type::OBJECT)
-
-        end_label = JIT::Label.new
-
-        function.if(lhs.is_fixnum) {
-          function.if(rhs.is_fixnum) {
-            # TODO: This optimization is only valid if Fixnum#+ has not
-            # been redefined.  Fortunately, YARV gives us
-            # ruby_vm_redefined_flag, which we can check.
-            result.store(lhs - (rhs & function.const(JIT::Type::INT, ~1)))
-            function.insn_branch(end_label)
-          } .end
-        } .end
-
-        set_source(function)
-        env.stack.sync_sp()
-        result.store(function.rb_funcall(lhs, :-, rhs))
-
-        function.insn_label(end_label)
-
-        env.stack.push(result)
+        ludicrous_compile_binary_op(
+            :function => function,
+            :env      => env,
+            :operator => :-,
+            :fixnum   => proc { |lhs, rhs|
+              lhs - (rhs & function.const(JIT::Type::INT, ~1)) }
+            )
       end
     end
 
     class OPT_NEQ
       def ludicrous_compile(function, env)
-        rhs = env.stack.pop
-        lhs = env.stack.pop
-
-        result = function.value(JIT::Type::OBJECT)
-
-        end_label = JIT::Label.new
-
-        function.if(lhs.is_fixnum) {
-          function.if(rhs.is_fixnum) {
-            # TODO: This optimization is only valid if Fixnum#+ has not
-            # been redefined.  Fortunately, YARV gives us
-            # ruby_vm_redefined_flag, which we can check.
-            result.store(lhs.neq rhs)
-            function.insn_branch(end_label)
-          } .end
-        } .end
-
-        set_source(function)
-        env.stack.sync_sp()
-        result.store(function.rb_funcall(lhs, :!=, rhs))
-
-        function.insn_label(end_label)
-
-        env.stack.push(result)
+        ludicrous_compile_binary_op(
+            :function => function,
+            :env      => env,
+            :operator => :!=,
+            :fixnum   => proc { |lhs, rhs|
+              lhs.neq rhs }
+            )
       end
     end
 
