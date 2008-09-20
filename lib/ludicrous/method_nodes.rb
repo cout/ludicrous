@@ -113,7 +113,8 @@ class MethodNodeCompiler
       # some arguments are optional for this method
       @arguments_compiler = VariableArgumentsCompiler.new(
           @arg_names,
-          @args)
+          @args,
+          @node)
     else
       # all arguments required for this method
       @arguments_compiler = FixedArgumentsCompiler.new(
@@ -186,10 +187,11 @@ class FixedArgumentsCompiler < ArgumentsCompiler
 end
 
 class VariableArgumentsCompiler < ArgumentsCompiler
-  def initialize(arg_names, args)
+  def initialize(arg_names, args, node)
     super(arg_names)
 
     @args = args
+    @node = node
 
     @optional_args = @args.dup
     @optional_args.delete_if { |name, arg| !arg.optional? }
@@ -259,8 +261,7 @@ class VariableArgumentsCompiler < ArgumentsCompiler
     } .else {
       # this arg was not passed in
       arg = @optional_args[arg.name]
-      node = arg.node_or_iseq_for_default
-      val.store(node.ludicrous_compile(env.function, env))
+      val.store(@node.ludicrous_compile_optional_argument(arg))
     } .end
 
     env.scope.arg_set(arg.name, val)
@@ -286,6 +287,11 @@ class SCOPE
         compiler.compile_options,
         compiler.origin_class,
         scope)
+  end
+
+  def ludicrous_compile_optional_argument(arg)
+    node = arg.node_or_iseq_for_default
+    return node.ludicrous_compile(env.function, env)
   end
 
   def ludicrous_compile_into_function(
@@ -329,6 +335,10 @@ class METHOD
         self.body)
   end
 
+  def ludicrous_compile_optional_argument(arg)
+    raise "Unable to compile optional argument"
+  end
+
   def ludicrous_compile_into_function(
       origin_class,
       compile_options = Ludicrous::CompileOptions.new)
@@ -337,6 +347,9 @@ class METHOD
         self,
         origin_class,
         compile_options)
+
+    #
+    # puts self.body.disasm
 
     compiler.compile do |function, env|
       # LEAVE instruction should generate return instruction
