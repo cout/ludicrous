@@ -121,21 +121,21 @@ class YarvEnvironment < Environment
   end
 
   def branch(relative_offset)
-    offset = @offset + relative_offset
+    offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
     @function.insn_branch(@labels[offset])
   end
 
   def branch_if(cond, relative_offset)
-    offset = @offset + relative_offset
+    offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
     @function.insn_branch_if(cond, @labels[offset])
   end
 
   def branch_unless(cond, relative_offset)
-    offset = @offset + relative_offset
+    offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
     @function.insn_branch_if_not(cond, @labels[offset])
