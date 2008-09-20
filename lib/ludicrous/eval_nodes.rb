@@ -1572,10 +1572,7 @@ end
 
 class NOT
   def ludicrous_compile(function, env)
-    # shl: 0 => 0 (Qfalse); 1 => 2 (Qtrue)
-    rtest = self.body.ludicrous_compile(function, env).rtest
-    is_false = rtest == function.const(JIT::Type::INT, 0)
-    return function.insn_shl(is_false, function.const(JIT::Type::INT, 1))
+    return self.body.ludicrous_compile(function, env).rnot
   end
 end
 

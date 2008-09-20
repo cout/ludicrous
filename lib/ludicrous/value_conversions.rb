@@ -57,6 +57,14 @@ class Value
     return self.function.insn_and(self, not_qnil)
   end
 
+  def rnot
+    # shl: 0 => 0 (Qfalse); 1 => 2 (Qtrue)
+    is_false = self.rtest == self.function.const(JIT::Type::INT, 0)
+    return self.function.insn_shl(
+        is_false,
+        self.function.const(JIT::Type::INT, 1))
+  end
+
   # Array -> self
   # NilClass -> [ nil ]
   # Object -> self.to_a

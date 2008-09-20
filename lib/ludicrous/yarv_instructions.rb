@@ -105,6 +105,42 @@ class VM
       end
     end
 
+    def ludicrous_compile_unary_op(args)
+      function = args[:function]
+      env = args[:env]
+      operator = args[:operator]
+      fixnum_proc = args[:fixnum]
+
+      operand = env.stack.pop
+
+      result = function.value(JIT::Type::OBJECT)
+
+      end_label = JIT::Label.new
+
+      function.if(operand.is_fixnum) {
+        # TODO: This optimization is only valid if Fixnum#+ has not
+        # been redefined.  Fortunately, YARV gives us
+        # ruby_vm_redefined_flag, which we can check.
+        result.store(fixnum_proc.call(operand))
+        function.insn_branch(end_label)
+      } .end
+
+      set_source(function)
+      env.stack.sync_sp()
+      result.store(function.rb_funcall(operand, operator))
+
+      function.insn_label(end_label)
+
+      env.stack.push(result)
+    end
+
+    class OPT_NOT
+      def ludicrous_compile(function, env)
+        operand = env.stack.pop
+        env.stack.push(operand.rnot)
+      end
+    end
+
     class DUP
       def ludicrous_compile(function, env)
         env.stack.push(env.stack.top)
