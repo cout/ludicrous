@@ -73,6 +73,25 @@ class Environment
   def break
     @loops[-1].break
   end
+
+  # Find a constant, searching the environment's cref
+  def get_constant(vid)
+    # TODO: search whole const ref list, not just a single class
+    # TODO: set source before calling function
+    return @function.rb_const_get(@cbase, vid)
+  end
+
+  # Search the environment's cref to determine if a constant is defined
+  def constant_defined(vid)
+    # TODO: set source before calling function
+    result = @function.value(JIT::Type::OBJECT)
+    @function.if(@function.rb_const_defined(@cbase, vid)) {
+      result.store(@function.const(JIT::Type::OBJECT, "constant"))
+    } .else {
+      result.store(@function.const(JIT::Type::OBJECT, false))
+    } .end
+    return result
+  end
 end
 
 class ProgramCounter

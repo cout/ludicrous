@@ -565,19 +565,12 @@ end
 
 class CONST
   def ludicrous_compile(function, env)
-    # TODO: search whole const ref list, not just a single class
     set_source(function)
-    return function.rb_const_get(env.cbase, self.vid)
+    return env.get_constant(self.vid)
   end
 
   def ludicrous_defined(function, env)
-    result = function.value(JIT::Type::OBJECT)
-    function.if(function.rb_const_defined(env.cbase, self.vid)) {
-      result.store(function.const(JIT::Type::OBJECT, "constant"))
-    } .else {
-      result.store(function.const(JIT::Type::OBJECT, false))
-    } .end
-    return result
+    return env.constant_defined(self.vid)
   end
 end
 

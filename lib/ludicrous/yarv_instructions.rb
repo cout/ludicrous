@@ -217,6 +217,18 @@ class VM
       end
     end
 
+    class GETCONSTANT
+      def ludicrous_compile(function, env)
+        klass = env.stack.pop
+        vid = @operands[0]
+        function.if(klass == function.const(JIT::Type::OBJECT, nil)) {
+          return env.get_constant(vid)
+        }.else {
+          return function.rb_const_get(klass, vid)
+        }.end
+      end
+    end
+
     class JUMP
       def ludicrous_compile(function, env)
         relative_offset = @operands[0]
@@ -279,6 +291,12 @@ class VM
       def ludicrous_compile(function, env)
         # ignore, for now
         env.stack.push(function.const(JIT::Type::OBJECT, nil))
+      end
+    end
+
+    class SETINLINECACHE
+      def ludicrous_compile(function, env)
+        # ignore, for now
       end
     end
 
