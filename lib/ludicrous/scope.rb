@@ -137,8 +137,11 @@ class AddressableScope < ScopeBase
   end
 
   def initialize(function, local_names, locals=nil, args=[], rest_arg=nil, scope_ptr=nil, scope_obj=nil)
+    need_init = false
+
     if not locals then
       locals = {}
+      need_init = true
       local_names.each do |name|
         locals[name] = Ludicrous::LocalVariable.new(function, name)
       end
@@ -151,8 +154,6 @@ class AddressableScope < ScopeBase
 
     if not scope_ptr then
       scope_ptr = @function.ruby_xcalloc(1, scope_size)
-      # TODO: local variables really should be initialied to nil, not
-      # false (0)
     end
 
     @scope_ptr = scope_ptr
@@ -167,7 +168,7 @@ class AddressableScope < ScopeBase
     @local_names.each_with_index do |name, idx|
       offset = scope_type.offset_of(name)
       @locals[name].set_addressable(@scope_ptr, offset) if @locals[name]
-      @locals[name].init if not locals
+      @locals[name].init if need_init
     end
 
     if scope_obj then
