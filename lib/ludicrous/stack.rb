@@ -118,11 +118,17 @@ class StaticStack < Stack
   end
 
   def validate_branch(dest)
+    # Validate that there are no items left on the stack that were
+    # created inside the loop
     @stack_pc.each do |offset|
       if offset > dest then
         raise "Static stack does not allow branch over dynamic stack operations"
       end
     end
+
+    # TODO: Validate that we don't branch to a spot that immediately
+    # pops (not sure how to check this, but I'm pretty sure ruby doesn't
+    # generate any code that allows it)
   end
 end
 
