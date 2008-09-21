@@ -20,6 +20,7 @@ require 'ludicrous/scope'
 require 'ludicrous/environment'
 require 'ludicrous/compile_options'
 require 'ludicrous/debug_output'
+require 'ludicrous/toplevel'
 
 if defined?(VM) then
 # >= 1.9
