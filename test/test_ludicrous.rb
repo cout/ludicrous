@@ -353,6 +353,8 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal([nil], result)
   end
 
+  # TODO: not a very good test, we're really just making sure that we
+  # don't crash
   def test_op_asgn_and
     foo = Class.new do
       include Test::Unit::Assertions
@@ -475,9 +477,7 @@ class TestLudicrous < Test::Unit::TestCase
     program = <<-END
       42
     END
-    node = Node.compile_string(program)
-    toplevel_self = Object.new
-    f = node.ludicrous_compile_toplevel(toplevel_self)
+    f = program.ludicrous_compile_toplevel()
     assert_equal 42, f.apply()
   end
 
@@ -487,9 +487,7 @@ class TestLudicrous < Test::Unit::TestCase
         42
       end
     END
-    node = Node.compile_string(program)
-    toplevel_self = Object.new
-    f = node.ludicrous_compile_toplevel(toplevel_self)
+    f = program.ludicrous_compile_toplevel()
     assert_equal nil, f.apply()
     assert_equal 42, toplevel_self.foo
   end

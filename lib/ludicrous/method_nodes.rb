@@ -3,28 +3,58 @@ require 'internal/proc/signature'
 
 class Node
 
-def ludicrous_scope_info
-  klass = self.class
-
-  if klass == Node::DASGN_CURR or \
-     klass == Node::DASGN or \
-     klass == Node::DVAR then
+module DynamicVariableScopeInfo
+  def ludicrous_scope_info
     return true, [ self.vid ]
   end
+end
 
-  if klass == Node::MODULE or \
-     klass == Node::CLASS or \
-     klass == Node::DEFN or \
-     klass == Node::DEFS then
+class DASGN_CURR
+  include DynamicVariableScopeInfo
+end
+
+class DASGN
+  include DynamicVariableScopeInfo
+end
+
+class DVAR
+  include DynamicVariableScopeInfo
+end
+
+module DefinitionScopeInfo
+  def ludicrous_scope_info
     # TODO
     return false, [ ]
   end
+end
 
-  vars = []
-  if klass == Node::LASGN or \
-     klass == Node::LVAR then
+class MODULE
+  include DefinitionScopeInfo
+end
+
+class CLASS
+  include DefinitionScopeInfo
+end
+
+class DEFN
+  include DefinitionScopeInfo
+end
+
+class DEFS
+  include DefinitionScopeInfo
+end
+
+module LocalScopeInfo
+  def ludicrous_scope_info
+    needs_addressable_scope, vars = super
     vars << self.vid
+    return needs_addressable_scope, vars
   end
+end
+
+def ludicrous_scope_info
+  klass = self.class
+  vars = []
 
   if klass.const_defined?(:LIBJIT_NEEDS_ADDRESSABLE_SCOPE) then
     needs_addressable_scope = true
@@ -42,47 +72,6 @@ def ludicrous_scope_info
   end
 
   return needs_addressable_scope, vars
-end
-
-def ludicrous_compile_toplevel(
-    toplevel_self,
-    options = Ludicrous::CompileOptions.new)
-  signature = JIT::Type.create_signature(
-    JIT::ABI::CDECL,
-    JIT::Type::OBJECT,
-    [ ])
-
-  JIT::Context.build do |context|
-    function = JIT::Function.compile(context, signature) do |f|
-      f.optimization_level = options.optimization_level
-
-      needs_addressable_scope, vars = self.next.ludicrous_scope_info
-      vars.uniq!
-      scope_type = needs_addressable_scope \
-        ? Ludicrous::AddressableScope \
-        : Ludicrous::Scope
-      scope = scope_type.new(f, vars)
-
-      origin_class = f.const(JIT::Type::OBJECT, toplevel_self.class) # TODO: is this right?
-
-      env = Ludicrous::Environment.new(
-          f,
-          options,
-          origin_class,
-          scope)
-
-      env.scope.self = f.const(JIT::Type::OBJECT, toplevel_self)
-
-      result = self.ludicrous_compile(f, env)
-      if not result then
-        f.insn_return(f.const(JIT::Type::OBJECT, nil))
-      elsif not result.is_returned then
-        f.insn_return(result)
-      end
-    end
-
-    return function
-  end
 end
 
 class MethodNodeCompiler
