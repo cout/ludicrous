@@ -5,8 +5,8 @@ class VM
         # env.stack.sync_sp
         # function.debug_inspect_object instruction
         env.make_label
-        instruction.ludicrous_compile(function, env)
         env.pc.advance(instruction.length)
+        instruction.ludicrous_compile(function, env)
         # env.stack.sync_sp
         # env.stack.debug_inspect
       end
