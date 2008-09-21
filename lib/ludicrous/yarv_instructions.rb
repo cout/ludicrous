@@ -221,11 +221,16 @@ class VM
       def ludicrous_compile(function, env)
         klass = env.stack.pop
         vid = @operands[0]
+
+        # TODO: can determine this at compile-time
+        result = function.value(JIT::Type::OBJECT)
         function.if(klass == function.const(JIT::Type::OBJECT, nil)) {
-          return env.get_constant(vid)
+          result.store(env.get_constant(vid))
         }.else {
-          return function.rb_const_get(klass, vid)
+          result.store(function.rb_const_get(klass, vid))
         }.end
+
+        env.stack.push(result)
       end
     end
 
