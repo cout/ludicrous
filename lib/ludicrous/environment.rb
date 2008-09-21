@@ -131,8 +131,8 @@ class YarvEnvironment < Environment
   def make_label
     # TODO: we don't need to label every offset, only the ones that we
     # might jump to
-    @labels[@offset] ||= JIT::Label.new
-    @function.insn_label(@labels[@offset])
+    @labels[@pc.offset] ||= JIT::Label.new
+    @function.insn_label(@labels[@pc.offset])
   end
 
   def get_label(offset)
