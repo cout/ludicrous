@@ -100,7 +100,7 @@ class VM
             :env      => env,
             :operator => :!=,
             :fixnum   => proc { |lhs, rhs|
-              lhs.neq rhs }
+              lhs.neq(rhs).to_rbool }
             )
       end
     end
@@ -118,8 +118,8 @@ class VM
       end_label = JIT::Label.new
 
       function.if(operand.is_fixnum) {
-        # TODO: This optimization is only valid if Fixnum#+ has not
-        # been redefined.  Fortunately, YARV gives us
+        # TODO: This optimization is only valid if Fixnum#<operator> has
+        # not been redefined.  Fortunately, YARV gives us
         # ruby_vm_redefined_flag, which we can check.
         result.store(fixnum_proc.call(operand))
         function.insn_branch(end_label)
@@ -276,6 +276,7 @@ class VM
 
         if flags & VM::CALL_FCALL_BIT != 0 then
           recv = env.scope.self
+          env.stack.pop # nil
         else
           recv = env.stack.pop
         end

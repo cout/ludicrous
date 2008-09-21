@@ -53,8 +53,15 @@ class Value
   def rtest
     #define RTEST(v) (((VALUE)(v) & ~Qnil) != 0)
     qnil = self.function.const(JIT::Type::OBJECT, nil)
-    not_qnil = self.function.insn_not(qnil)
-    return self.function.insn_and(self, not_qnil)
+    return self & ~qnil
+  end
+
+  def to_rbool
+    # 0 (Qfalse) => 0
+    # all else => 2 (Qtrue)
+    zero = self.function.const(JIT::Type::INT, 0)
+    one = self.function.const(JIT::Type::INT, 1)
+    return self.neq(zero) << one
   end
 
   def rnot
