@@ -487,7 +487,8 @@ class TestLudicrous < Test::Unit::TestCase
         42
       end
     END
-    f = program.ludicrous_compile_toplevel()
+    toplevel_self = Object.new
+    f = program.ludicrous_compile_toplevel(toplevel_self)
     assert_equal nil, f.apply()
     assert_equal 42, toplevel_self.foo
   end
