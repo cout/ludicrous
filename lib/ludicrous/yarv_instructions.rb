@@ -164,6 +164,39 @@ class VM
       end
     end
 
+    class EXPANDARRAY
+      class Flags
+        attr_reader :is_splat
+        attr_reader :is_post
+        attr_reader :is_normal
+
+        def initialize(flags)
+          @is_splat = (flags & 0x1) != 0
+          @is_post = (flags & 0x2) != 0
+          @is_normal = !@is_post
+        end
+      end
+
+      def ludicrous_compile(function, env)
+        num = @operands[0]
+        flags = Flags.new(@operands[1])
+
+        if flags.is_post then
+          ludicrous_compile_post(function, env)
+        else
+          ludicrous_compile_normal(function, env)
+        end
+      end
+
+      def ludicrous_compile_post(function, env)
+        raise "Not implemented"
+      end
+
+      def ludicrous_compile_normal(function, env)
+        raise "Not implemented"
+      end
+    end
+
     class NEWARRAY
       def ludicrous_compile(function, env)
         # TODO: possible to optimize this
