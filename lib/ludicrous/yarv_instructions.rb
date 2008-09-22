@@ -181,19 +181,27 @@ class VM
         num = @operands[0]
         flags = Flags.new(@operands[1])
 
+        ary = env.stack.pop
+
         if flags.is_post then
-          ludicrous_compile_post(function, env)
+          ludicrous_compile_post(function, env, ary, num, flags)
         else
-          ludicrous_compile_normal(function, env)
+          ludicrous_compile_normal(function, env, ary, num, flags)
         end
       end
 
-      def ludicrous_compile_post(function, env)
+      def ludicrous_compile_post(function, env, ary, num, flags)
         raise "Not implemented"
       end
 
-      def ludicrous_compile_normal(function, env)
-        raise "Not implemented"
+      def ludicrous_compile_normal(function, env, ary, num, flags)
+        if flags.is_splat then
+          remainder = function.rb_funcall(ary, :[], 0..num)
+          env.stack.push(remainder)
+        end
+        (num-1).downto(0) do |i|
+          env.stack.push(function.rb_ary_at(ary, i))
+        end
       end
     end
 
