@@ -712,10 +712,12 @@ class Function
   end
 
   def rb_node_newnode(type, a0, a1, a2)
-    if type < Node then
-      type = const(JIT::Type::INT, type.type.to_i)
-    elsif type.is_a?(Integer) then
+    if type.is_a?(Integer) then
       type = const(JIT::Type::INT, type)
+    elsif type < Node then
+      type = const(JIT::Type::INT, type.type.to_i)
+    else
+      raise "Invalid node type: #{type.inspect}"
     end
       
     fptr = Ludicrous::function_pointer_of(:rb_node_newnode)
