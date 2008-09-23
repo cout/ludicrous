@@ -141,6 +141,16 @@ class VM
       end
     end
 
+    class OPT_AREF
+      def ludicrous_compile(function, env)
+        obj = env.stack.pop
+        recv = env.stack.pop
+
+        result = function.rb_funcall(recv, :[], obj)
+        env.stack.push(result)
+      end
+    end
+
     class DUP
       def ludicrous_compile(function, env)
         env.stack.push(env.stack.top)
