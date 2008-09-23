@@ -181,7 +181,15 @@ class VM
         num = @operands[0]
         flags = Flags.new(@operands[1])
 
+        # TODO: insn_dup does not dup constants, so we do this -- is
+        # there a better way?
         ary = env.stack.pop
+        # ary = function.insn_dup(ary)
+        ary = ary + function.const(JIT::Type::INT, 0)
+
+        function.unless(ary.is_type(Ludicrous::T_ARRAY)) {
+          ary.store(function.rb_ary_to_ary(ary))
+        }.end
 
         if flags.is_post then
           ludicrous_compile_post(function, env, ary, num, flags)
