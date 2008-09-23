@@ -31,13 +31,6 @@ else
 require 'ludicrous/eval_nodes'
 end
 
-if defined?(VM) then
-require 'ludicrous/iseq'
-require 'ludicrous/instructions'
-else
-require 'ludicrous/eval_nodes'
-end
-
 class Mutex
   LUDICROUS_DONT_COMPILE = true
 end
