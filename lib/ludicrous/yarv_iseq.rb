@@ -1,4 +1,6 @@
-class VM
+require 'ludicrous/yarv_vm'
+
+class RubyVM
   class InstructionSequence
     def ludicrous_compile(function, env)
       self.each do |instruction|

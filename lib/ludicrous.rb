@@ -22,7 +22,9 @@ require 'ludicrous/compile_options'
 require 'ludicrous/debug_output'
 require 'ludicrous/toplevel'
 
-if defined?(VM) then
+require 'ludicrous/yarv_vm'
+
+if defined?(RubyVM) then
 # >= 1.9
 require 'ludicrous/yarv_instructions'
 require 'ludicrous/yarv_iseq'

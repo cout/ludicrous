@@ -1,3 +1,5 @@
+require 'ludicrous/yarv_vm'
+
 class Node
 
 def ludicrous_compile_toplevel(
@@ -44,9 +46,9 @@ end
 
 end
 
-if defined?(VM) then
+if defined?(RubyVM) then
 
-class VM
+class RubyVM
   class InstructionSequence
     def ludicrous_compile_toplevel(
       toplevel_self,
@@ -80,6 +82,8 @@ class VM
 
           env.scope.self = f.const(JIT::Type::OBJECT, toplevel_self)
 
+          # puts self.disasm
+
           # LEAVE instruction should generate return instruction
           self.ludicrous_compile(f, env)
         end
@@ -89,12 +93,12 @@ class VM
 
     end # def ludicrous_compile_toplevel
   end # class InstructionSequence
-end # class VM
+end # class RubyVM
 
-end # if defined?(VM)
+end # if defined?(RubyVM)
 
 class String
-  if defined?(VM) then
+  if defined?(RubyVM) then
     # >= 1.9
     def ludicrous_compile_toplevel(toplevel_self = Object.new)
       node = Node.compile_string(self)

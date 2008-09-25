@@ -1,6 +1,7 @@
+require 'ludicrous/yarv_vm'
 require 'internal/vm/constants'
 
-class VM
+class RubyVM
   class Instruction
     def set_source(function)
       # TODO
@@ -324,21 +325,21 @@ class VM
         flags = @operands[3]
         ic = @operands[4]
 
-        if flags & VM::CALL_ARGS_BLOCKARG_BIT != 0 then
+        if flags & RubyVM::CALL_ARGS_BLOCKARG_BIT != 0 then
           raise "Block arg not supported"
         end
 
-        if flags & VM::CALL_ARGS_SPLAT_BIT != 0 then
+        if flags & RubyVM::CALL_ARGS_SPLAT_BIT != 0 then
           raise "Splat not supported"
         end
 
-        if flags & VM::CALL_VCALL_BIT != 0 then
+        if flags & RubyVM::CALL_VCALL_BIT != 0 then
           raise "Vcall not supported"
         end
 
         args = (1..argc).collect { env.stack.pop }
 
-        if flags & VM::CALL_FCALL_BIT != 0 then
+        if flags & RubyVM::CALL_FCALL_BIT != 0 then
           recv = env.scope.self
           env.stack.pop # nil
         else
