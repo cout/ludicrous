@@ -7,6 +7,11 @@ class RubyVM
       # TODO
     end
 
+    class TRACE
+      def ludicrous_compile(function, env)
+      end
+    end
+
     class PUTOBJECT
       def ludicrous_compile(function, env)
         value = function.const(JIT::Type::OBJECT, self.operands[0])
