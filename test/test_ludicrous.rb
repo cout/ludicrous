@@ -616,8 +616,25 @@ class TestLudicrous < Test::Unit::TestCase
 end
 
 if __FILE__ == $0 then
+  def disable_mini_unit_auto_run
+    Mini::Test.class_eval do
+      alias :run_ :run
+      def run(*args)
+        return $mini_unit_exit_code
+      end
+    end 
+  end
+  
   require 'logger'
   Ludicrous.logger = Logger.new(STDERR)
-  exit Test::Unit::AutoRunner.run #(true)
+  if defined?(Mini::Test) then
+    begin
+      exit Mini::Test.new.run(ARGV)
+    ensure
+      disable_mini_unit_auto_run
+    end
+  else
+    exit Test::Unit::AutoRunner.run #(true)
+  end
 end
 
