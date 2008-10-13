@@ -4,6 +4,10 @@ require 'internal/node/to_a'
 require 'internal/method/signature'
 require 'internal/noex'
 
+# TODO: The only reason this file is required here is that for now, it
+# must be required before ludicrous.so.
+require 'internal/thread'
+
 require 'jit'
 require 'jit/value'
 require 'jit/struct'
