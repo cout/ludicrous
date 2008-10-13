@@ -755,6 +755,41 @@ class Function
     return insn_call_native(:unwrap_node, fptr, signature, 0, node, recv, cref)
   end
 
+  def ruby_current_thread_jmp_buf()
+    fptr = Ludicrous::function_pointer_of(:ruby_current_thread_jmp_buf)
+    signature = JIT::Type::create_signature(
+        JIT::ABI::CDECL,
+        JIT::Type::VOID_PTR,
+        [ ])
+    return insn_call_native(:ruby_current_thread_jmp_buf, fptr, signature, 0)
+  end
+
+  def ruby_current_thread_tag()
+    fptr = Ludicrous::function_pointer_of(:ruby_current_thread_tag)
+    signature = JIT::Type::create_signature(
+        JIT::ABI::CDECL,
+        JIT::Type::VOID_PTR,
+        [ ])
+    return insn_call_native(:ruby_current_thread_tag, fptr, signature, 0)
+  end
+
+  def ruby_set_current_thread_tag(new_tag)
+    fptr = Ludicrous::function_pointer_of(:ruby_set_current_thread_tag)
+    signature = JIT::Type::create_signature(
+        JIT::ABI::CDECL,
+        JIT::Type::VOID,
+        [ JIT::Type::VOID_PTR ])
+    return insn_call_native(:ruby_set_current_thread_tag, fptr, signature, 1, new_tag)
+  end
+
+  def _setjmp(jmp_buf)
+    fptr = Ludicrous::function_pointer_of(:_setjmp)
+    signature = JIT::Type::create_signature(
+        JIT::ABI::CDECL,
+        JIT::Type::INT,
+        [ JIT::Type::VOID_PTR ])
+    return insn_call_native(:_setjmp, fptr, signature, 0, jmp_buf)
+  end
 end # Function
 
 end # JIT
