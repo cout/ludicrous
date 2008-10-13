@@ -33,12 +33,29 @@ if have_struct_member("struct RString", "ptr", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RSTRING_PTR"
 end
 
+if have_struct_member("struct RRegexp", "len", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RREGEXP_LEN"
+end
+
+if have_struct_member("struct RRegexp", "ptr", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RREGEXP_PTR"
+end
+
 if have_struct_member("struct RHash", "tbl", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RHASH_TBL"
 end
 
 have_type("FRAME", [ "ruby.h", "env.h" ])
 have_type("SCOPE", [ "ruby.h", "env.h" ])
+
+if have_header('ruby/node.h') then
+  # ruby.h defines HAVE_RUBY_NODE_H, even though it is not there
+  $defs.push("-DREALLY_HAVE_RUBY_NODE_H")
+elsif have_header('node.h') then
+  # okay
+else
+  $defs.push("-DNEED_MINIMAL_NODE")
+end
 
 rb_files = Dir['*.rb']
 rpp_files = Dir['*.rpp']

@@ -1,11 +1,20 @@
 #include <jit/jit.h>
 #include <ruby.h>
 
-#ifdef RUBY_VM
+#ifdef REALLY_HAVE_RUBY_NODE_H
 #include <ruby/node.h>
-#else
-#include <env.h>
+#endif
+
+#ifdef HAVE_NODE_H
 #include <node.h>
+#endif
+
+#ifdef NEED_MINIMAL_NODE
+#include "minimal_node.h"
+#endif
+
+#ifndef RUBY_VM
+#include <env.h>
 #endif
 
 #include <rubyjit.h>
@@ -18,9 +27,27 @@ static VALUE rb_errinfo()
 #endif
 
 /* Defined in ruby-internal */
+#ifdef RUBY_VM
+#include <setjmp.h>
+void * ruby_current_thread_jmp_buf();
+void * ruby_current_thread_tag(void * tag);
+void * ruby_set_current_thread_tag(void * tag);
+#endif
 VALUE wrap_node(NODE * n);
 NODE * unwrap_node(VALUE v);
 VALUE eval_ruby_node(NODE * node, VALUE self, VALUE cref);
+
+#ifdef RUBY_VM
+#include <setjmp.h>
+typedef jmp_buf rb_jmpbuf_t;
+struct rb_vm_tag {
+  rb_jmpbuf_t buf;
+  VALUE tag;
+  VALUE retval;
+  struct rb_vm_tag *prev;
+};  
+
+#endif
 
 static VALUE rb_cFunction;
 static VALUE rb_cValue;
@@ -34,15 +61,13 @@ struct Member_Info
 static VALUE name_to_function_pointer = Qnil;
 static VALUE struct_name_to_member_name_info = Qnil;
 
-/* Given a struct name, the name of a struct member, and a jit pointer,
- * to the struct, return a jit pointer to the member within the struct.
- */
-static VALUE function_ruby_struct_member(
-    VALUE self, VALUE struct_name, VALUE member_name, VALUE ptr_v)
-{
-  jit_function_t function;
-  Data_Get_Struct(self, struct _jit_function, function);
+/* Ruby 1.9 does not declare these functions */
+struct global_entry;
+VALUE rb_gvar_defined(struct global_entry * entry);
+struct global_entry * rb_global_entry(ID id);
 
+static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name)
+{
   VALUE member_name_info = rb_hash_aref(
       struct_name_to_member_name_info, 
       struct_name);
@@ -62,20 +87,64 @@ static VALUE function_ruby_struct_member(
   struct Member_Info * member_info;
   Data_Get_Struct(member_info_v, struct Member_Info, member_info);
 
-  if(!rb_obj_is_kind_of(ptr_v, rb_cValue))
+  return member_info;
+}
+
+static jit_value_t get_value(VALUE value_v, char const * arg_name)
+{
+  jit_value_t value;
+  Data_Get_Struct(value_v, struct _jit_value, value);
+
+  if(!rb_obj_is_kind_of(value_v, rb_cValue))
   {
     rb_raise(
         rb_eTypeError,
-        "Wrong type for ptr; expected Value but got %s",
-        rb_class2name(CLASS_OF(ptr_v)));
+        "Wrong type for %s; expected Value but got %s",
+        arg_name,
+        rb_class2name(CLASS_OF(value_v)));
   }
 
-  jit_value_t ptr;
-  Data_Get_Struct(ptr_v, struct _jit_value, ptr);
+  return value;
+}
+
+/* Given a struct name, the name of a struct member, and a jit pointer,
+ * to the struct, return a jit value of the member within the struct.
+ */
+static VALUE function_ruby_struct_member(
+    VALUE self, VALUE struct_name, VALUE member_name, VALUE ptr_v)
+{
+  jit_function_t function;
+  jit_value_t ptr = get_value(ptr_v, "ptr");
+
+  struct Member_Info * member_info = get_member_info(
+      struct_name,
+      member_name);
+
+  Data_Get_Struct(self, struct _jit_function, function);
 
   jit_value_t result = jit_insn_load_relative(
       function, ptr, member_info->offset, member_info->type);
+
   return Data_Wrap_Struct(rb_cValue, 0, 0, result);
+}
+
+static VALUE function_set_ruby_struct_member(
+    VALUE self, VALUE struct_name, VALUE member_name, VALUE ptr_v, VALUE value_v)
+{
+  jit_function_t function;
+  jit_value_t ptr = get_value(ptr_v, "ptr");
+  jit_value_t value = get_value(value_v, "value");
+
+  struct Member_Info * member_info = get_member_info(
+      struct_name,
+      member_name);
+
+  Data_Get_Struct(self, struct _jit_function, function);
+
+  jit_insn_store_relative(
+      function, ptr, member_info->offset, value);
+
+  return Qnil;
 }
 
 #ifdef RUBY_VM
@@ -252,6 +321,7 @@ static VALUE block_pass_call(VALUE recv, ID mid, VALUE args, VALUE proc)
  */
 static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 {
+#ifndef RUBY_VM
   NODE * n;
   jit_function_t function;
 
@@ -260,7 +330,6 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
 
   VALUE value_objects = (VALUE)jit_function_get_meta(function, RJT_VALUE_OBJECTS);
 
-#ifndef RUBY_VM
   jit_constant_t c;
 
   c.type = jit_type_int;
@@ -291,11 +360,11 @@ static VALUE function_set_ruby_source(VALUE self, VALUE node_v)
   jit_insn_store_relative(function, ruby_sourcefile_ptr, 0, file);
   jit_insn_store_relative(function, ruby_current_node_ptr, 0, node);
 
+  rb_ary_push(value_objects, node_v);
+
 #else
   /* TODO: Not sure what to do on 1.9 yet */
 #endif
-
-  rb_ary_push(value_objects, node_v);
 
   return Qnil;
 }
@@ -350,6 +419,7 @@ void Init_ludicrous()
   rb_cFunction = rb_define_class_under(rb_mJIT, "Function", rb_cObject);
   rb_define_method(rb_cFunction, "set_ruby_source", function_set_ruby_source, 1);
   rb_define_method(rb_cFunction, "ruby_struct_member", function_ruby_struct_member, 3);
+  rb_define_method(rb_cFunction, "set_ruby_struct_member", function_set_ruby_struct_member, 4);
 
   rb_cValue = rb_define_class_under(rb_mJIT, "Value", rb_cObject);
 
@@ -459,7 +529,30 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_node_newnode);
 
   /* From ruby-internal */
+  /* TODO: The require lines here do not seem to help for getting the
+   * following symbols loaded before they are used.  It appears that
+   * using a function pointer causes the function to be resolved at load
+   * time rather than at time of use.
+   *   - One quick workaround is to require the files before
+   *     ludicrous.so is required.
+   *   - Another possiblity (which would work also on machines where
+   *     RTLD_GLOBAL is unavailable) would be to obtain the function
+   *     pointers through a different means, e.g. by calling through
+   *     ruby to ask the other module for its function pointers.
+   *   - A last possiblity would be to create a local function here
+   *     that calls the real function.
+   * The third option requires fewer changes than the second, but has
+   * negative performance implications.
+   */
   rb_require("internal/node");
+#ifdef RUBY_VM
+  rb_require("internal/thread");
+  DEFINE_FUNCTION_POINTER(ruby_current_thread_jmp_buf);
+  DEFINE_FUNCTION_POINTER(ruby_current_thread_tag);
+  DEFINE_FUNCTION_POINTER(ruby_set_current_thread_tag);
+  DEFINE_FUNCTION_POINTER(setjmp);
+  DEFINE_FUNCTION_POINTER(_setjmp);
+#endif
   DEFINE_FUNCTION_POINTER(wrap_node);
   DEFINE_FUNCTION_POINTER(unwrap_node);
   DEFINE_FUNCTION_POINTER(eval_ruby_node);
@@ -507,8 +600,14 @@ void Init_ludicrous()
   // TODO: capa, shared
 
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, ptr, jit_type_void_ptr);
+
+#ifdef HAVE_ST_RREGEXP_LEN
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, len, jit_type_uint);
+#endif
+
+#ifdef HAVE_ST_RREGEXP_STR
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, str, jit_type_void_ptr);
+#endif
 
 #ifdef HAVE_ST_RHASH_TBL
   DEFINE_RUBY_STRUCT_MEMBER(RHash, tbl, jit_type_void_ptr);
@@ -540,6 +639,50 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_tbl, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_vars, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, flags, jit_type_int);
+#endif
+
+#ifdef RUBY_VM
+  DEFINE_RUBY_STRUCT_MEMBER(rb_vm_tag, tag, jit_type_VALUE);
+  DEFINE_RUBY_STRUCT_MEMBER(rb_vm_tag, retval, jit_type_VALUE);
+  DEFINE_RUBY_STRUCT_MEMBER(rb_vm_tag, prev, jit_type_void_ptr);
+
+  {
+    rb_require("jit/struct");
+    VALUE rb_mJIT = rb_const_get(rb_cObject, rb_intern("JIT"));
+    VALUE rb_cJIT_Array = rb_const_get(rb_mJIT, rb_intern("Array"));
+    VALUE rb_cJIT_Type = rb_const_get(rb_mJIT, rb_intern("Type"));
+    VALUE jit_ubyte_type = rb_const_get(rb_cJIT_Type, rb_intern("UBYTE"));
+    VALUE rb_cJmp_Buf = rb_funcall(
+        rb_cJIT_Array,
+        rb_intern("new"),
+        2,
+        jit_ubyte_type,
+        INT2NUM(sizeof(jmp_buf)));
+    rb_const_set(rb_mLudicrous, rb_intern("JmpBuf"), rb_cJmp_Buf);
+    VALUE rb_cVMTag = rb_eval_string(
+        "module Ludicrous                      \n"
+        "  VMTag = JIT::Struct.new(            \n"
+        "      [ :buf, JmpBuf],                \n"
+        "      [ :tag, JIT::Type::OBJECT],     \n"
+        "      [ :retval, JIT::Type::OBJECT],  \n"
+        "      [ :prev, JIT::Type::VOID_PTR]   \n"
+        "  )                                   \n"
+        " end                                  \n"
+        " Ludicrous::VMTag                     \n"
+        );
+    ID set_offset_of = rb_intern("set_offset_of");
+#define SET_OFFSET(klass, c_type, member) \
+    rb_funcall( \
+        klass, \
+        set_offset_of, \
+        2, \
+        ID2SYM(rb_intern(#member)), \
+        UINT2NUM(offsetof(struct rb_vm_tag, member)));
+    SET_OFFSET(rb_cVMTag, rb_vm_tag, buf);
+    SET_OFFSET(rb_cVMTag, rb_vm_tag, tag);
+    SET_OFFSET(rb_cVMTag, rb_vm_tag, retval);
+    SET_OFFSET(rb_cVMTag, rb_vm_tag, prev);
+  }
 #endif
 
   rb_define_const(rb_mLudicrous, "Qundef", UINT2NUM(Qundef));
@@ -583,5 +726,9 @@ void Init_ludicrous()
 
   rb_define_const(rb_mLudicrous, "YIELD_FUNC_AVALUE", UINT2NUM(1));
   rb_define_const(rb_mLudicrous, "YIELD_FUNC_SVALUE", UINT2NUM(2));
+
+#ifdef NEED_MINIMAL_NODE
+  Init_minimal_node();
+#endif
 }
 
