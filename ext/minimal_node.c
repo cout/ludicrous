@@ -28,7 +28,7 @@ static int node_value(char const * name)
   }
 }
 
-void Init_minimal_node()
+void Init_ludicrous_minimal_node()
 {
   NODE_MEMO = node_value("NODE_MEMO");
   NODE_METHOD = node_value("NODE_METHOD");

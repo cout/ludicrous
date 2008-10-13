@@ -44,7 +44,7 @@ extern int NODE_SPLAT;
 extern int NODE_LIT;
 extern int NODE_BLOCK_PASS;
 
-void Init_minimal_node();
+void Init_ludicrous_minimal_node();
 
 #define NOEX_PUBLIC 0x0
 

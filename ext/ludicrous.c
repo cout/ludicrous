@@ -278,6 +278,7 @@ static VALUE ludicrous_splat_iterate_proc(
 
 static VALUE block_pass_fcall(VALUE recv, ID mid, VALUE args, VALUE proc)
 {
+  printf("NODE_BLOCK_PASS=%d\n", NODE_BLOCK_PASS);
 #ifdef RUBY_VM
   /* TODO: need to set filename on node for 1.9 */
   /* TODO: would be better to construct an iseq directly */
@@ -728,7 +729,7 @@ void Init_ludicrous()
   rb_define_const(rb_mLudicrous, "YIELD_FUNC_SVALUE", UINT2NUM(2));
 
 #ifdef NEED_MINIMAL_NODE
-  Init_minimal_node();
+  Init_ludicrous_minimal_node();
 #endif
 }
 
