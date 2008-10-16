@@ -1,3 +1,5 @@
+require 'ludicrous/iter_loop'
+
 class Node
 
 def set_source(function)
@@ -857,26 +859,6 @@ class YIELD
   end
 end
 
-ITER_ARG_TYPE = JIT::Struct.new(
-    [ :recv, JIT::Type::OBJECT ],
-    [ :scope, JIT::Type::OBJECT ])
-
-class LudicrousIterLoop
-  def initialize(function)
-    @function = function
-    @start_label = JIT::Label.new
-    @function.insn_label(@start_label)
-  end
-
-  def break
-    @function.rb_iter_break()
-  end
-
-  def redo
-    @function.insn_branch(@start_label)
-  end
-end
-
 # The fastest way to iterate, but not 100% correct, because:
 #   yield *[[1, 2]]
 # should be yielded to us as:
@@ -887,7 +869,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
   # lhs - an assignment node that gets executed each time through
   # the loop
   # body - the body of the loop
-  # iter - the sequence to iterate over
+  # recv -
   # 1. compile a nested function from the body of the loop
   # 2. pass this nested function as a parameter to 
 
@@ -901,7 +883,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
   iter_f = JIT::Function.compile(function.context, iter_signature) do |f|
     f.optimization_level = env.options.optimization_level
 
-    iter_arg = ITER_ARG_TYPE.wrap(f, f.get_param(0))
+    iter_arg = Ludicrous::ITER_ARG_TYPE.wrap(f, f.get_param(0))
     outer_scope_obj = iter_arg.scope
     inner_recv = iter_arg.recv
     inner_scope = Ludicrous::AddressableScope.load(
@@ -927,7 +909,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
     inner_env = Ludicrous::Environment.new(
         f, env.options, env.cbase, inner_scope)
 
-    loop = LudicrousIterLoop.new(f)
+    loop = Ludicrous::IterLoop.new(f)
     r = inner_env.iter(loop) {
       ludicrous_assign(f, inner_env, lhs, value)
 
@@ -944,7 +926,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
     # puts f
   end
 
-  iter_arg = ITER_ARG_TYPE.create(function)
+  iter_arg = Ludicrous::ITER_ARG_TYPE.create(function)
   iter_arg.recv = recv ? recv : function.const(JIT::Type::OBJECT, nil)
   iter_arg.scope = scope_obj
 
@@ -978,7 +960,7 @@ def ludicrous_iter_proc(function, env, lhs, body)
       value = value.avalue_splat
     end
 
-    loop = LudicrousIterLoop.new(f)
+    loop = Ludicrous::IterLoop.new(f)
     r = inner_env.iter(loop) {
       ludicrous_assign(f, inner_env, lhs, value)
 
@@ -1026,7 +1008,7 @@ def ludicrous_iter_splat_proc(function, env, lhs, body)
     inner_env = Ludicrous::Environment.new(
         f, env.options, env.cbase, inner_scope)
 
-    loop = LudicrousIterLoop.new(f)
+    loop = Ludicrous::IterLoop.new(f)
     r = inner_env.iter(loop) {
       ludicrous_assign(f, inner_env, lhs, value.avalue_splat)
 
@@ -1178,22 +1160,19 @@ class FOR
     when :fast
       v = ludicrous_iterate(function, env, self.var, self.body, recv) do |f, inner_env, recv|
         self.iter.set_source(f)
-        mid = function.const(JIT::Type::ID, :each)
-        f.rb_funcall(recv, mid)
+        f.rb_funcall(recv, :each)
       end
       result.store(v)
     when :proc
       block = ludicrous_iter_proc(function, env, self.var, self.body)
-      mid = function.const(JIT::Type::ID, :each)
       args = nil
       result = ludicrous_iterate_with_proc(
-          function, env, recv, mid, args, false, block)
+          function, env, recv, :each, args, false, block)
     when :splat
       block = ludicrous_iter_splat_proc(function, env, self.var, self.body)
-      mid = function.const(JIT::Type::ID, :each)
       args = nil
       result = ludicrous_iterate_with_proc(
-          function, env, recv, mid, args, false, block)
+          function, env, recv, :each, args, false, block)
     else
       raise "Invalid iterate style #{iterate_style}"
     end
