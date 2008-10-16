@@ -1,4 +1,5 @@
 require 'ludicrous/yarv_vm'
+require 'ludicrous/iter_loop'
 require 'internal/vm/constants'
 
 class RubyVM
@@ -322,6 +323,61 @@ class RubyVM
       end
     end
 
+    def ludicrous_iterate(function, env, body, recv=nil)
+      # body - the iseq for body of the loop
+      # recv -
+      # 1. compile a nested function from the body of the loop
+      # 2. pass this nested function as a parameter to 
+
+      iter_signature = JIT::Type.create_signature(
+          JIT::ABI::CDECL,
+          JIT::Type::OBJECT,
+          [ JIT::Type::VOID_PTR ])
+      iter_f = JIT::Function.compile(function.context, iter_signature) do |f|
+        f.optimization_level = env.options.optimization_level
+
+        iter_arg = Ludicrous::IterArg.wrap(f, f.get_param(0))
+        inner_scope = Ludicrous::AddressableScope.load(
+            f, iter_arg.scope, env.scope.local_names,
+            env.scope.args, env.scope.rest_arg)
+        inner_env = Ludicrous::YarvEnvironment.new(
+            f, env.options, env.cbase, iter_arg.scope, nil)
+
+        result = yield(f, inner_env, iter_arg.recv)
+        f.insn_return result
+      end
+
+      body_signature = JIT::Type::create_signature(
+          JIT::ABI::CDECL,
+          JIT::Type::OBJECT,
+          [ JIT::Type::OBJECT, JIT::Type::VOID_PTR ])
+      body_f = JIT::Function.compile(function.context, body_signature) do |f|
+        f.optimization_level = env.options.optimization_level
+
+        value = f.get_param(0)
+        outer_scope_obj = f.get_param(1)
+        inner_scope = Ludicrous::AddressableScope.load(
+            f, outer_scope_obj, env.scope.local_names, env.scope.args,
+            env.scope.rest_arg)
+        inner_env = Ludicrous::YarvEnvironment.new(
+            f, env.options, env.cbase, inner_scope, body)
+
+        loop = Ludicrous::IterLoop.new(f)
+        inner_env.iter(loop) {
+          # TODO: loop variable assignment?
+          body.ludicrous_compile(f, inner_env)
+        }
+      end
+
+      iter_arg = Ludicrous::IterArg.new(function, env, recv)
+
+      # TODO: will this leak memory if the function is redefined later?
+      iter_c = function.const(JIT::Type::FUNCTION_PTR, iter_f.to_closure)
+      body_c = function.const(JIT::Type::FUNCTION_PTR, body_f.to_closure)
+      set_source(function)
+      return function.rb_iterate(iter_c, iter_arg.ptr, body_c, iter_arg.scope)
+    end
+
     class SEND
       def ludicrous_compile(function, env)
         mid = @operands[0]
@@ -331,6 +387,7 @@ class RubyVM
         ic = @operands[4]
 
         if flags & RubyVM::CALL_ARGS_BLOCKARG_BIT != 0 then
+          # TODO: set blockiseq
           raise "Block arg not supported"
         end
 
@@ -353,7 +410,19 @@ class RubyVM
 
         # TODO: pull in optimizations from eval_nodes.rb
         env.stack.sync_sp()
-        result = function.rb_funcall(recv, mid, *args)
+
+        if blockiseq then
+          result = ludicrous_iterate(function, env, blockiseq, recv) do |f, e, r|
+            # TODO: args is still referencing the outer function
+            f.insn_return f.rb_funcall(r, mid, *args)
+          end
+        else
+          result = function.rb_funcall(recv, mid, *args)
+          # TODO: not sure why this was here, maybe I was trying to
+          # prevent a crash
+          # result = function.const(JIT::Type::OBJECT, nil)
+        end
+
         env.stack.push(result)
       end
     end
