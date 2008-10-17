@@ -283,6 +283,13 @@ class RubyVM
       end
     end
 
+    class GETDYNAMIC
+      def ludicrous_compile(function, env)
+        name = env.local_variable_name(@operands[0])
+        env.stack.push(env.scope.dyn_get(name))
+      end
+    end
+
     class GETCONSTANT
       def ludicrous_compile(function, env)
         klass = env.stack.pop
