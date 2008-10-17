@@ -452,6 +452,24 @@ class RubyVM
       end
     end
 
+    class THROW
+      def ludicrous_compile(function, env)
+        throw_state = @operands[0]
+        state = throw_state & 0xff
+        flag = throw_state & 0x8000
+        level = throw_state >> 16
+
+        throwobj = env.stack.pop
+
+        case state
+        when Tag::RETURN
+          env.return(throwobj)
+        else
+          raise "Cannot handle tag #{state}"
+        end
+      end
+    end
+
     class GETINLINECACHE
       def ludicrous_compile(function, env)
         # ignore, for now
