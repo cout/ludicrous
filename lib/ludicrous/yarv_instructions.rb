@@ -375,7 +375,8 @@ class RubyVM
       iter_c = function.const(JIT::Type::FUNCTION_PTR, iter_f.to_closure)
       body_c = function.const(JIT::Type::FUNCTION_PTR, body_f.to_closure)
       set_source(function)
-      return function.rb_iterate(iter_c, iter_arg.ptr, body_c, iter_arg.scope)
+      result = function.rb_iterate(iter_c, iter_arg.ptr, body_c, iter_arg.scope)
+      return result
     end
 
     class SEND
@@ -414,7 +415,7 @@ class RubyVM
         if blockiseq then
           result = ludicrous_iterate(function, env, blockiseq, recv) do |f, e, r|
             # TODO: args is still referencing the outer function
-            f.insn_return f.rb_funcall(r, mid, *args)
+            f.rb_funcall(r, mid, *args)
           end
         else
           result = function.rb_funcall(recv, mid, *args)
