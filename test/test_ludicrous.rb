@@ -86,6 +86,21 @@ class TestLudicrous < Test::Unit::TestCase
     end
   end
 
+  def test_simple_block
+    foo = Class.new do
+      include Test::Unit::Assertions
+      def bar
+        return yield
+      end
+
+      def foo
+        return bar { 42 }
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal 42, result
+  end
+
   def test_reassign_no_block
     foo = Class.new do
       include Test::Unit::Assertions
@@ -371,10 +386,10 @@ class TestLudicrous < Test::Unit::TestCase
       include Test::Unit::Assertions
       def bar(val)
         a = yield
-        assert_equal(a, val)
+        assert_equal(val, a)
       end
       def foo
-        bar(nil) { next }
+        bar(nil) { 1; next; 2 }
       end
     end
     compile_and_run(foo.new, :foo)
