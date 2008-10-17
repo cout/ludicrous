@@ -47,6 +47,7 @@ struct rb_vm_tag {
   struct rb_vm_tag *prev;
 };  
 
+extern VALUE rb_mRubyVMFrozenCore;
 #endif
 
 static VALUE rb_cFunction;
@@ -727,6 +728,10 @@ void Init_ludicrous()
 
   rb_define_const(rb_mLudicrous, "YIELD_FUNC_AVALUE", UINT2NUM(1));
   rb_define_const(rb_mLudicrous, "YIELD_FUNC_SVALUE", UINT2NUM(2));
+
+#ifdef RUBY_VM
+  rb_define_const(rb_mLudicrous, "RUBY_VM_FROZEN_CORE", rb_mRubyVMFrozenCore);
+#endif
 
 #ifdef NEED_MINIMAL_NODE
   Init_ludicrous_minimal_node();
