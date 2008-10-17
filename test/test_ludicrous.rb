@@ -19,6 +19,32 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, compile_and_run(foo.new, :foo)
   end
 
+  def test_call_method_one_arg
+    foo = Class.new do
+      def bar(*args)
+        return args
+      end
+
+      def foo(x)
+        return bar(x)
+      end
+    end
+    assert_equal 42, compile_and_run(foo.new, :foo, 42)
+  end
+
+  def test_call_method_two_args
+    foo = Class.new do
+      def bar(*args)
+        return args
+      end
+
+      def foo(x, y)
+        return bar(x, y)
+      end
+    end
+    assert_equal [ 42, 43 ], compile_and_run(foo.new, :foo, 42, 43)
+  end
+
   def test_add_fixnums
     foo = Class.new do
       include Test::Unit::Assertions
@@ -384,9 +410,9 @@ class TestLudicrous < Test::Unit::TestCase
   def test_simple_next
     foo = Class.new do
       include Test::Unit::Assertions
-      def bar(val)
+      def bar(expected)
         a = yield
-        assert_equal(val, a)
+        assert_equal(expected, a)
       end
       def foo
         bar(nil) { 1; next; 2 }
