@@ -39,6 +39,33 @@ class RubyVM
       end
     end
 
+    class PUTSPECIALOBJECT
+      def ludicrous_compile(function, env)
+        value_type = @operands[0]
+        case value_type
+        when RubyVM::SPECIAL_OBJECT_VMCORE
+          value = function.const(
+              JIT::Type::OBJECT,
+              Ludicrous::RUBY_VM_FROZEN_CORE)
+        when RubyVM::SPECIAL_OBJECT_CBASE
+          value = env.cbase
+        else
+          raise "Invalid special value type #{value_type}"
+        end
+
+        function.debug_inspect_object(value)
+        env.stack.push(value)
+      end
+    end
+
+    class PUTISEQ
+      def ludicrous_compile(function, env)
+        iseq = @operands[0]
+        function.debug_inspect_object(iseq)
+        env.stack.push(iseq)
+      end
+    end
+
     class LEAVE
       def ludicrous_compile(function, env)
         retval = env.stack.pop
@@ -425,6 +452,7 @@ class RubyVM
         end
 
         args = (1..argc).collect { env.stack.pop }
+        args.reverse!
 
         if flags & RubyVM::CALL_FCALL_BIT != 0 then
           recv = env.scope.self
