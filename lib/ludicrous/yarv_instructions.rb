@@ -371,7 +371,7 @@ class RubyVM
 
         loop = Ludicrous::IterLoop.new(f)
         inner_env.iter(loop) {
-          # TODO: loop variable assignment?
+          ludicrous_iter_arg_assign(f, inner_env, body, value)
           body.ludicrous_compile(f, inner_env)
         }
       end
@@ -384,6 +384,23 @@ class RubyVM
       set_source(function)
       result = function.rb_iterate(iter_c, iter_arg.ptr, body_c, iter_arg.scope)
       return result
+    end
+
+    def ludicrous_iter_arg_assign(function, env, body, value)
+      len = function.ruby_struct_member(:RArray, :len, value)
+      ptr = function.ruby_struct_member(:RArray, :ptr, value)
+
+      if not body.arg_simple then
+        raise "Cannot handle non-simple block arguments"
+      end
+
+      # TODO: size check?
+      for i in 0...(body.argc) do
+        # TODO: make sure the block argument is local to this scope
+        idx = function.const(JIT::Type::INT, i)
+        value = function.insn_load_elem(ptr, idx, JIT::Type::OBJECT)
+        env.scope.dyn_set(body.local_table[i], value)
+      end
     end
 
     class SEND
