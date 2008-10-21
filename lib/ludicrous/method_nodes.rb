@@ -337,9 +337,6 @@ class METHOD
         origin_class,
         compile_options)
 
-    #
-    # puts self.body.disasm
-
     compiler.compile do |function, env|
       # LEAVE instruction should generate return instruction
       self.body.ludicrous_compile(function, env)
