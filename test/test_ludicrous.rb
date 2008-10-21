@@ -283,11 +283,16 @@ class TestLudicrous < Test::Unit::TestCase
           assert false, "Should not reach this point"
         rescue exc
           assert exc === $!
+          return 42
         end
       end
     end
-    compile_and_run(foo.new, :foo, StandardError)
-    compile_and_run(foo.new, :foo, ArgumentError)
+
+    result = compile_and_run(foo.new, :foo, StandardError)
+    assert_equal 42, result
+
+    result = compile_and_run(foo.new, :foo, ArgumentError)
+    assert_equal 42, result
   end
 
   def test_retry
