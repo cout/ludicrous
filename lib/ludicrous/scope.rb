@@ -16,15 +16,20 @@ class ScopeBase
   end
 
   def local_set(vid, value)
-    if not @locals[vid] then
-      raise "No local variable defined for #{vid}"
+    local = @locals[vid]
+    if not local then
+      raise "Cannot set #{vid}: no such local variable defined"
     end
-    @locals[vid].set(value)
+    local.set(value)
     return value
   end
 
   def local_get(vid)
-    return @locals[vid].get()
+    local = @locals[vid]
+    if not local then
+      raise "Cannot get #{vid}: no such local variable defined"
+    end
+    return local.get()
   end
 
   def local_defined(vid)
