@@ -27,6 +27,19 @@ class RubyVM
       end
     end
 
+    class TOSTRING
+      def ludicrous_compile(function, env)
+        obj = function.const(JIT::Type::OBJECT, @operands[0])
+        return function.rb_obj_as_string(obj)
+      end
+    end
+
+    class CONCATSTRINGS
+      def ludicrous_compile(function, env)
+        raise "TODO"
+      end
+    end
+
     class PUTNIL
       def ludicrous_compile(function, env)
         env.stack.push(function.const(JIT::Type::OBJECT, nil))
@@ -53,7 +66,6 @@ class RubyVM
           raise "Invalid special value type #{value_type}"
         end
 
-        function.debug_inspect_object(value)
         env.stack.push(value)
       end
     end
@@ -61,7 +73,6 @@ class RubyVM
     class PUTISEQ
       def ludicrous_compile(function, env)
         iseq = @operands[0]
-        function.debug_inspect_object(iseq)
         env.stack.push(iseq)
       end
     end
@@ -306,14 +317,47 @@ class RubyVM
     class GETLOCAL
       def ludicrous_compile(function, env)
         name = env.local_variable_name(@operands[0])
-        env.stack.push(env.scope.local_get(name))
+        value = env.scope.local_get(name)
+        env.stack.push(value)
+      end
+    end
+
+    class GETGLOBAL
+      def ludicrous_compile(function, env)
+        name = @operands[0]
+
+        if name == '$!'.intern then
+          # TODO: the global errinfo getter looks in the control frame
+          # for $! -- should we be setting errinfo there?
+          value = function.rb_errinfo()
+        else
+          ptr = function.rb_string_value_ptr(name_str.address)
+          name_str = function.value(JIT::Type::OBJECT)
+          name_str.store(function.const(JIT::Type::OBJECT, name.to_s))
+          value = function.rb_gv_get(ptr)
+        end
+
+        env.stack.push(value)
       end
     end
 
     class GETDYNAMIC
       def ludicrous_compile(function, env)
-        name = env.local_variable_name(@operands[0])
-        env.stack.push(env.scope.dyn_get(name))
+        idx = @operands[0]
+        level = @operands[1]
+
+        # TODO: we use level to determine the name, but we should also
+        # use it when finding the variable
+        name = env.dyn_variable_name(idx, level)
+
+        # TODO: I don't know if this is right
+        if name == '#$!'.intern then
+          value = function.rb_errinfo()
+        else
+          value = env.scope.dyn_get(name)
+        end
+
+        env.stack.push(value)
       end
     end
 
@@ -337,7 +381,7 @@ class RubyVM
     class JUMP
       def ludicrous_compile(function, env)
         relative_offset = @operands[0]
-        env.branch(relative_offset)
+        env.branch_relative(relative_offset)
       end
     end
 
@@ -345,7 +389,7 @@ class RubyVM
       def ludicrous_compile(function, env)
         relative_offset = @operands[0]
         val = env.stack.pop
-        env.branch_if(val.rtest, relative_offset)
+        env.branch_relative_if(val.rtest, relative_offset)
       end
     end
 
@@ -353,7 +397,7 @@ class RubyVM
       def ludicrous_compile(function, env)
         relative_offset = @operands[0]
         val = env.stack.pop
-        env.branch_unless(val.rtest, relative_offset)
+        env.branch_relative_unless(val.rtest, relative_offset)
       end
     end
 
@@ -490,6 +534,9 @@ class RubyVM
         throwobj = env.stack.pop
 
         case state
+        when 0
+          # continue throw
+          function.rb_jump_tag(state)
         when Tag::RETURN
           env.return(throwobj)
         else
