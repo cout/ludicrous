@@ -3,6 +3,10 @@ require 'ludicrous/native_functions'
 module JIT
 
 class Function
+  def debug_printf(*args)
+    rb_funcall($stdout, :printf, *args)
+  end
+
   def debug_print_object(obj)
     rb_funcall($stdout, :puts, obj)
   end
