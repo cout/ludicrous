@@ -124,8 +124,19 @@ class YarvEnvironment < Environment
   end
 
   def local_variable_name(idx)
-    local_table_idx = @iseq.local_table.size - idx + 1
-    return @iseq.local_table[local_table_idx]
+    local_table = @iseq.local_iseq.local_table
+    local_table_idx = local_table.size - idx + 1
+    return local_table[local_table_idx]
+  end
+
+  def dyn_variable_name(idx, level)
+    iseq = @iseq
+    while level > 0 and iseq
+      iseq = iseq.parent_iseq
+    end
+
+    dyn_table_idx = iseq.local_table.size - idx + 1
+    return iseq.local_table[dyn_table_idx]
   end
 
   def make_label
@@ -139,21 +150,25 @@ class YarvEnvironment < Environment
     return @labels[offset]
   end
 
-  def branch(relative_offset)
-    offset = @pc.offset + relative_offset
+  def branch(offset)
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
     @function.insn_branch(@labels[offset])
   end
 
-  def branch_if(cond, relative_offset)
+  def branch_relative(relative_offset)
+    offset = @pc.offset + relative_offset
+    branch(offset)
+  end
+
+  def branch_relative_if(cond, relative_offset)
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
     @function.insn_branch_if(cond, @labels[offset])
   end
 
-  def branch_unless(cond, relative_offset)
+  def branch_relative_unless(cond, relative_offset)
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
