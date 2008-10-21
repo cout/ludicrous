@@ -440,9 +440,11 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_call_super);
   DEFINE_FUNCTION_POINTER(rb_add_method);
   DEFINE_FUNCTION_POINTER(rb_obj_is_kind_of);
+  DEFINE_FUNCTION_POINTER(rb_obj_as_string);
   DEFINE_FUNCTION_POINTER(rb_str_dup);
   DEFINE_FUNCTION_POINTER(rb_str_plus);
   DEFINE_FUNCTION_POINTER(rb_str_concat);
+  DEFINE_FUNCTION_POINTER(rb_string_value_ptr);
   DEFINE_FUNCTION_POINTER(rb_ary_new);
   DEFINE_FUNCTION_POINTER(rb_ary_new2);
   DEFINE_FUNCTION_POINTER(rb_ary_new3);

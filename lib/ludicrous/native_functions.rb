@@ -180,6 +180,15 @@ class Function
     return insn_call_native(:rb_ary_dup, fptr, signature, 0, obj)
   end
 
+  def rb_obj_as_string(obj)
+    fptr = Ludicrous.function_pointer_of(:rb_obj_as_string)
+    signature = JIT::Type.create_signature(
+      JIT::ABI::CDECL,
+      JIT::Type::OBJECT,
+      [ JIT::Type::OBJECT ])
+    return insn_call_native(:rb_obj_as_string, fptr, signature, 0, obj)
+  end
+
   def rb_str_dup(str)
     fptr = Ludicrous.function_pointer_of(:rb_str_dup)
     signature = JIT::Type.create_signature(
@@ -205,6 +214,15 @@ class Function
       JIT::Type::OBJECT,
       [ JIT::Type::OBJECT, JIT::Type::OBJECT ])
     return insn_call_native(:rb_str_concat, fptr, signature, 0, str1, str2)
+  end
+
+  def rb_string_value_ptr(str_ptr)
+    fptr = Ludicrous.function_pointer_of(:rb_string_value_ptr)
+    signature = JIT::Type.create_signature(
+      JIT::ABI::CDECL,
+      JIT::Type::VOID_PTR,
+      [ JIT::Type::VOID_PTR ])
+    return insn_call_native(:rb_string_value_ptr, fptr, signature, 0, str_ptr)
   end
 
   def rb_hash_new
