@@ -106,8 +106,20 @@ class ProgramCounter
   end
 end
 
-class YarvEnvironment < Environment
+class YarvBaseEnvironment < Environment
   attr_reader :stack
+
+  def initialize(function, options, cbase, scope)
+    super(function, options, cbase, scope)
+
+    @pc = ProgramCounter.new
+
+    # @stack = YarvStack.new(function)
+    @stack = StaticStack.new(function, @pc)
+  end
+end
+
+class YarvEnvironment < YarvBaseEnvironment
   attr_reader :pc
   attr_reader :sorted_catch_table
 
@@ -116,13 +128,12 @@ class YarvEnvironment < Environment
 
     @iseq = iseq
 
-    @pc = ProgramCounter.new
-
-    # @stack = YarvStack.new(function)
-    @stack = StaticStack.new(function, @pc)
-
     @labels = {}
 
+    init_catch_table(iseq)
+  end
+
+  def init_catch_table(iseq)
     @sorted_catch_table = iseq.catch_table.sort { |lhs, rhs|
       [ lhs.start, lhs.end ] <=> [ rhs.start, rhs.end ]
     }

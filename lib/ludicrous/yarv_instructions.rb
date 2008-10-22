@@ -418,8 +418,8 @@ class RubyVM
         inner_scope = Ludicrous::AddressableScope.load(
             f, iter_arg.scope, env.scope.local_names,
             env.scope.args, env.scope.rest_arg)
-        inner_env = Ludicrous::YarvEnvironment.new(
-            f, env.options, env.cbase, iter_arg.scope, nil)
+        inner_env = Ludicrous::YarvBaseEnvironment.new(
+            f, env.options, env.cbase, iter_arg.scope)
 
         result = yield(f, inner_env, iter_arg.recv)
         f.insn_return result
