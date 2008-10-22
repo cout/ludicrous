@@ -185,6 +185,17 @@ class YarvEnvironment < YarvBaseEnvironment
     @function.insn_branch(@labels[offset])
   end
 
+  def branch_consume(offset)
+    if @stack.static? then
+      @function.insn_branch(@labels[offset])
+      # value = stack.pop
+      # branch(offset)
+      # stack.push(value)
+    else
+      branch(offset)
+    end
+  end
+
   def branch_relative(relative_offset)
     offset = @pc.offset + relative_offset
     branch(offset)
@@ -220,6 +231,16 @@ class YarvEnvironment < YarvBaseEnvironment
     # TODO: _setjmp may or may not be right for this platform
     jmp_buf = @function.ruby_current_thread_jmp_buf()
     return @function._setjmp(jmp_buf)
+  end
+
+  def with_tag(tag)
+    push_tag(tag)
+    state = exec_tag
+    function.if(state == function.const(JIT::Type::INT, 0)) {
+      yield
+    }.end
+    pop_tag(tag)
+    return state
   end
 
   def with_tag_for(catch_entry)

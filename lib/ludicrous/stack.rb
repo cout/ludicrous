@@ -130,6 +130,10 @@ class StaticStack < Stack
     # pops (not sure how to check this, but I'm pretty sure ruby doesn't
     # generate any code that allows it)
   end
+
+  def static?
+    return true
+  end
 end
 
 class YarvStack < Stack
@@ -222,6 +226,10 @@ class YarvStack < Stack
 
   def validate_branch(dest)
     # no-op
+  end
+
+  def static?
+    return false
   end
 end
 

@@ -71,15 +71,28 @@ class RubyVM
           if catch_entry.sp != 0 then
             raise "Can't handle catch entry with sp=#{sp}"
           end
-          catch_entry_env = Ludicrous::YarvEnvironment.new(
-              function,
-              env.options,
-              env.cbase,
-              env.scope,
-              catch_entry.iseq)
-          catch_entry.iseq.ludicrous_compile(function, catch_entry_env)
+
+          tag = Ludicrous::VMTag.create(function)
+          catch_state = env.with_tag(tag) do
+            catch_entry_env = Ludicrous::YarvEnvironment.new(
+                function,
+                env.options,
+                env.cbase,
+                env.scope,
+                catch_entry.iseq)
+            catch_entry.iseq.ludicrous_compile(function, catch_entry_env)
+          end
+
           # TODO: reset errinfo
-          env.branch(catch_entry.cont)
+
+          function.if(catch_state == zero) {
+            env.branch(catch_entry.cont)
+          }.elsif(catch_state == function.const(JIT::Type::INT, Tag::RETRY)) {
+            env.branch_consume(catch_entry.start)
+          }.else {
+            function.rb_jump_tag(state)
+          }.end
+
         }.else {
           function.rb_jump_tag(state)
         }.end
@@ -88,12 +101,11 @@ class RubyVM
         raise "Unknown catch type 'ensure'"
 
       when CATCH_TYPE_RETRY
-        function.if(state == zero) {
-        }.elsif(state == catch_tag) {
-          env.branch(catch_entry.cont)
-        }.else {
-          function.rb_jump_tag(state)
-        }.end
+        # Retry is an interesting special case.  The retry block is
+        # always surrounding a no-op, which is jumped to by a RESCUE
+        # block.  We always handle the retry case in ludicrous by the
+        # rescue block, above, so we don't need to (shouldn't try to)
+        # handle it here.
 
       when CATCH_TYPE_BREAK, CATCH_TYPE_REDO, CATCH_TYPE_NEXT
         function.if(state == zero) {
@@ -114,10 +126,11 @@ class RubyVM
 
     def ludicrous_compile_next_instruction(function, env, instruction)
       # env.stack.sync_sp
-      function.debug_print_msg(
-          "#{'%04d' % env.pc.offset} " +
-          "#{'%x' % self.object_id} " +
-          "#{instruction.inspect}")
+      msg = "#{'%04d' % env.pc.offset} " +
+            "#{'%x' % self.object_id} " +
+            "#{instruction.inspect}"
+      # puts msg
+      function.debug_print_msg(msg)
       # function.debug_inspect_object instruction
       env.make_label
       env.pc.advance(instruction.length)
