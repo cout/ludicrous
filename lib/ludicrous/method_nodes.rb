@@ -123,6 +123,7 @@ class MethodNodeCompiler
     arguments_compiler = create_arguments_compiler()
     signature = arguments_compiler.jit_signature
 
+    function = nil
     JIT::Context.build do |context|
       function = JIT::Function.compile(context, signature) do |f|
         f.optimization_level = @compile_options.optimization_level
@@ -140,11 +141,13 @@ class MethodNodeCompiler
           raise
         end
       end
-
-      # puts function.dump
-      # exit
-      return function
     end
+
+    # TODO: We return from here instead of inside the build() call in
+    # order to work-around a segfault.  This doesn't likely solve the
+    # problem, just hides it, but the stack trace isn't good enough to
+    # track the problem down.
+    return function
   end
 end
 
@@ -337,10 +340,12 @@ class METHOD
         origin_class,
         compile_options)
 
-    compiler.compile do |function, env|
+    result = compiler.compile do |function, env|
       # LEAVE instruction should generate return instruction
       self.body.ludicrous_compile(function, env)
     end
+
+    return result
   end
 end
 
