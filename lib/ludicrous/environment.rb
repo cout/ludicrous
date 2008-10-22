@@ -109,6 +109,7 @@ end
 class YarvEnvironment < Environment
   attr_reader :stack
   attr_reader :pc
+  attr_reader :sorted_catch_table
 
   def initialize(function, options, cbase, scope, iseq)
     super(function, options, cbase, scope)
@@ -121,6 +122,22 @@ class YarvEnvironment < Environment
     @stack = StaticStack.new(function, @pc)
 
     @labels = {}
+
+    @sorted_catch_table = iseq.catch_table.sort { |lhs, rhs|
+      [ lhs.start, lhs.end ] <=> [ rhs.start, rhs.end ]
+    }
+
+    @catch_table_tag = {}
+    @sorted_catch_table.each do |catch_table|
+      @catch_table_tag[catch_table] = 
+        Ludicrous::VMTag.create(@function)
+    end
+
+    @catch_table_state = {}
+    @sorted_catch_table.each do |catch_table|
+      @catch_table_state[catch_table] = 
+        @function.value(JIT::Type::INT)
+    end
   end
 
   def local_variable_name(idx)
@@ -153,6 +170,7 @@ class YarvEnvironment < Environment
   def branch(offset)
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
+    prepare_longjmp(offset)
     @function.insn_branch(@labels[offset])
   end
 
@@ -165,6 +183,7 @@ class YarvEnvironment < Environment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
+    prepare_longjmp(offset)
     @function.insn_branch_if(cond, @labels[offset])
   end
 
@@ -172,15 +191,14 @@ class YarvEnvironment < Environment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
+    prepare_longjmp(offset)
     @function.insn_branch_if_not(cond, @labels[offset])
   end
  
-  def push_tag
-    tag = Ludicrous::VMTag.create(@function)
+  def push_tag(tag)
     tag.tag = function.const(JIT::Type::INT, 0)
     tag.prev = function.ruby_current_thread_tag()
     @function.ruby_set_current_thread_tag(tag.ptr)
-    return tag
   end
 
   def pop_tag(tag)
@@ -193,14 +211,43 @@ class YarvEnvironment < Environment
     return @function._setjmp(jmp_buf)
   end
 
-  def with_tag
-    tag = push_tag
+  def with_tag_for(catch_entry)
+    tag = @catch_table_tag[catch_entry]
+    push_tag(tag)
     state = exec_tag
+    @catch_table_state[catch_entry].store(state)
     function.if(state == function.const(JIT::Type::INT, 0)) {
       yield
     }.end
     pop_tag(tag)
-    return state
+    return @catch_table_state[catch_entry]
+  end
+
+  def prepare_longjmp(offset)
+    currently_inside = inside_catch_entries(@pc.offset)
+    jumping_inside = inside_catch_entries(offset)
+
+    currently_inside.reverse.each do |catch_entry|
+      tag = @catch_table_tag[catch_entry]
+      pop_tag(tag)
+    end
+
+    jumping_inside.each do |catch_entry|
+      tag = @catch_table_tag[catch_entry]
+      push_tag(tag)
+      state = exec_tag
+      @catch_table_state[catch_entry].store(state)
+    end
+  end
+
+  def inside_catch_entries(offset)
+    catch_entries = []
+    @sorted_catch_table.each do |catch_entry|
+      if offset >= catch_entry.start and offset <= catch_entry.end then
+        catch_entries << catch_entry
+      end
+    end
+    return catch_entries
   end
 end
 

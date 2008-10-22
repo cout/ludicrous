@@ -14,14 +14,10 @@ class RubyVM
     end
 
     def ludicrous_compile_body_with_catch(function, env)
-      sorted_catch_table = self.catch_table.sort { |lhs, rhs|
-        [ lhs.start, lhs.end ] <=> [ rhs.start, rhs.end ]
-      }
-
       instructions = self.entries
       idx = 0
 
-      sorted_catch_table.each do |catch_entry|
+      env.sorted_catch_table.each do |catch_entry|
         while env.pc.offset < catch_entry.start do
           instruction = instructions[idx]
           ludicrous_compile_next_instruction(function, env, instruction)
@@ -66,7 +62,7 @@ class RubyVM
           CATCH_TYPE_TAG[catch_entry.type])
       zero = function.const(JIT::Type::INT, 0)
 
-      state = env.with_tag(&block)
+      state = env.with_tag_for(catch_entry, &block)
 
       case catch_entry.type
       when CATCH_TYPE_RESCUE
