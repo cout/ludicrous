@@ -659,6 +659,25 @@ class TestLudicrous < Test::Unit::TestCase
     o.foo
     assert_equal nil, $~
   end
+
+  def test_errinfo_available_in_called_method
+    c = Class.new do
+      include Test::Unit::Assertions
+
+      def m(exc)
+        assert ! $!.nil?, "$! was nil"
+        assert_equal $!.object_id, exc.object_id
+      end
+
+      def foo(exc)
+        raise exc
+      rescue => e
+        m(exc)
+      end
+    end
+
+    compile_and_run(c.new, :foo, StandardError.new)
+  end
 end
 
 if __FILE__ == $0 then
