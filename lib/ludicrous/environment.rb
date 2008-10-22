@@ -174,6 +174,34 @@ class YarvEnvironment < Environment
     @stack.validate_branch(offset)
     @function.insn_branch_if_not(cond, @labels[offset])
   end
+ 
+  def push_tag
+    tag = Ludicrous::VMTag.create(@function)
+    tag.tag = function.const(JIT::Type::INT, 0)
+    tag.prev = function.ruby_current_thread_tag()
+    @function.ruby_set_current_thread_tag(tag.ptr)
+    return tag
+  end
+
+  def pop_tag(tag)
+    @function.ruby_set_current_thread_tag(tag.prev)
+  end
+
+  def exec_tag
+    # TODO: _setjmp may or may not be right for this platform
+    jmp_buf = @function.ruby_current_thread_jmp_buf()
+    return @function._setjmp(jmp_buf)
+  end
+
+  def with_tag
+    tag = push_tag
+    state = exec_tag
+    function.if(state == function.const(JIT::Type::INT, 0)) {
+      yield
+    }.end
+    pop_tag(tag)
+    return state
+  end
 end
 
 end # Ludicrous

@@ -13,26 +13,6 @@ class RubyVM
       end
     end
 
-    # TODO: This method belongs elsewhere
-    def push_tag(function, env)
-      tag = Ludicrous::VMTag.create(function)
-      tag.tag = function.const(JIT::Type::INT, 0)
-      tag.prev = function.ruby_current_thread_tag()
-      function.ruby_set_current_thread_tag(tag.ptr)
-      return tag
-    end
-
-    def pop_tag(function, env, tag)
-      function.ruby_set_current_thread_tag(tag.prev)
-    end
-
-    # TODO: This method belongs elsewhere
-    def exec_tag(function, env)
-      # TODO: _setjmp may or may not be right for this platform
-      jmp_buf = function.ruby_current_thread_jmp_buf()
-      return function._setjmp(jmp_buf)
-    end
-
     def ludicrous_compile_body_with_catch(function, env)
       sorted_catch_table = self.catch_table.sort { |lhs, rhs|
         [ lhs.start, lhs.end ] <=> [ rhs.start, rhs.end ]
@@ -80,22 +60,13 @@ class RubyVM
       CATCH_TYPE_RETRY  => Tag::RETRY,
     })
 
-    def ludicrous_compile_catch_entry(function, env, catch_entry)
+    def ludicrous_compile_catch_entry(function, env, catch_entry, &block)
       catch_tag = function.const(
           JIT::Type::INT,
           CATCH_TYPE_TAG[catch_entry.type])
       zero = function.const(JIT::Type::INT, 0)
 
-      tag = push_tag(function, env)
-      state = exec_tag(function, env)
-      function.debug_printf("state=%d\n", state.int2fix)
-      function.if(state == zero) {
-      function.debug_printf("yield\n")
-        yield
-      function.debug_printf("yield done\n")
-      }.end
-      pop_tag(function, env, tag)
-      function.debug_printf("state=%d\n", state.int2fix)
+      state = env.with_tag(&block)
 
       case catch_entry.type
       when CATCH_TYPE_RESCUE
