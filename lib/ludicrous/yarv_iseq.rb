@@ -49,7 +49,11 @@ class RubyVM
         end
 
         ludicrous_compile_catch_entry(function, env, catch_entry) do
-          while env.pc.offset < catch_entry.end do
+          # TODO: I don't know if this should be < or <=.  If <, then
+          # REDO fails to compile (because the LEAVE instruction at the
+          # end is missed, so the stack isn't empty when it hits the
+          # branch)
+          while env.pc.offset <= catch_entry.end do
             instruction = instructions[idx]
             ludicrous_compile_next_instruction(function, env, instruction)
             idx += 1
@@ -64,20 +68,39 @@ class RubyVM
       end
     end
 
+    CATCH_TYPE_TAG = Hash.new { |h, k|
+      raise "No such catch type #{k}"
+    }
+
+    CATCH_TYPE_TAG.update({
+      CATCH_TYPE_RESCUE => Tag::RAISE,
+      CATCH_TYPE_BREAK  => Tag::BREAK,
+      CATCH_TYPE_REDO   => Tag::REDO,
+      CATCH_TYPE_NEXT   => Tag::NEXT,
+      CATCH_TYPE_RETRY  => Tag::RETRY,
+    })
+
     def ludicrous_compile_catch_entry(function, env, catch_entry)
+      catch_tag = function.const(
+          JIT::Type::INT,
+          CATCH_TYPE_TAG[catch_entry.type])
       zero = function.const(JIT::Type::INT, 0)
+
+      tag = push_tag(function, env)
+      state = exec_tag(function, env)
+      function.debug_printf("state=%d\n", state.int2fix)
+      function.if(state == zero) {
+      function.debug_printf("yield\n")
+        yield
+      function.debug_printf("yield done\n")
+      }.end
+      pop_tag(function, env, tag)
+      function.debug_printf("state=%d\n", state.int2fix)
 
       case catch_entry.type
       when CATCH_TYPE_RESCUE
-        tag = push_tag(function, env)
-        state = exec_tag(function, env)
         function.if(state == zero) {
-          self.ludicrous_compile_body(function, env)
-        }.end
-        pop_tag(function, env, tag)
-
-        function.if(state == zero) {
-        }.elsif(state == function.const(JIT::Type::INT, Tag::RAISE)) {
+        }.elsif(state == catch_tag) {
           if catch_entry.sp != 0 then
             raise "Can't handle catch entry with sp=#{sp}"
           end
@@ -96,17 +119,23 @@ class RubyVM
 
       when CATCH_TYPE_ENSURE
         raise "Unknown catch type 'ensure'"
+
       when CATCH_TYPE_RETRY
-        # raise "Unknown catch type 'retry'"
-        yield # TODO
-      when CATCH_TYPE_BREAK
-        raise "Unknown catch type 'break'"
-      when CATCH_TYPE_REDO
-        # raise "Unknown catch type 'redo'"
-        yield # TODO
-      when CATCH_TYPE_NEXT
-        # raise "Unknown catch type 'next'"
-        yield # TODO
+        function.if(state == zero) {
+        }.elsif(state == catch_tag) {
+          env.branch(catch_entry.cont)
+        }.else {
+          function.rb_jump_tag(state)
+        }.end
+
+      when CATCH_TYPE_BREAK, CATCH_TYPE_REDO, CATCH_TYPE_NEXT
+        function.if(state == zero) {
+        }.elsif(state == catch_tag) {
+          env.branch(catch_entry.cont)
+        }.else {
+          function.rb_jump_tag(state)
+        }.end
+        
       end
     end
 
