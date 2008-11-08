@@ -803,7 +803,7 @@ class UNTIL
   def ludicrous_compile(function, env)
     cond = proc { self.cond.ludicrous_compile(function, env).rtest }
     retval = function.value(JIT::Type::OBJECT)
-    function.until(cond) { |loop|
+    function.until { &cond }.do { |loop|
       env.loop(loop) {
         if self.body then
           retval.store(self.body.ludicrous_compile(function, env))
@@ -1058,7 +1058,7 @@ def ludicrous_range_iterate(function, env, range_begin, range_end, var, body)
   value.store(range_begin)
 
   at_end = proc { ludicrous_compile_call(function, env, value, :==, [range_end]) }
-  function.until(at_end) { |loop|
+  function.until { &at_end }.do { |loop|
     ludicrous_assign(function, env, var, value)
     loop.redo_from_here
     env.loop(loop) {
@@ -1109,7 +1109,7 @@ def ludicrous_array_iterate(function, env, array, var, body)
   idx = function.value(JIT::Type::INT)
   idx.store(function.const(JIT::Type::INT, 0))
 
-  function.until(proc { idx == len }) { |loop|
+  function.until { idx == len }.do { |loop|
     env.loop(loop) {
       value = function.insn_load_elem(ptr, idx, JIT::Type::OBJECT)
       ludicrous_assign(function, env, var, value)
