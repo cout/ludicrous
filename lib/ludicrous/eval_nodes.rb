@@ -820,7 +820,7 @@ class WHILE
   def ludicrous_compile(function, env)
     cond = proc { self.cond.ludicrous_compile(function, env).rtest }
     retval = function.value(JIT::Type::OBJECT)
-    function.while(cond) { |loop|
+    function.while { &cond }.do { |loop|
       env.loop(loop) {
         if self.body then
           retval.store(self.body.ludicrous_compile(function, env))

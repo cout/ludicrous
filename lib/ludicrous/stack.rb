@@ -218,7 +218,7 @@ class YarvStack < Stack
 
   def each
     last = @size
-    @function.while(proc { idx <= last }) {
+    @function.while { idx <= last }.do {
       yield topn(idx)
       idx.store(idx + @function.const(JIT::Type::INT, 1))
     }.end
