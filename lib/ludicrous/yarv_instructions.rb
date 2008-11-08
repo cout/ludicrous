@@ -29,14 +29,22 @@ class RubyVM
 
     class TOSTRING
       def ludicrous_compile(function, env)
-        obj = function.const(JIT::Type::OBJECT, @operands[0])
-        return function.rb_obj_as_string(obj)
+        obj = env.stack.pop
+        str = function.rb_obj_as_string(obj)
+        env.stack.push(str)
       end
     end
 
     class CONCATSTRINGS
       def ludicrous_compile(function, env)
-        raise "TODO"
+        num = @operands[0]
+        # TODO: I'm pretty sure this is implemented wrong
+        str = function.rb_str_dup("") # TODO: rb_str_new
+        strings = (0...num).collect { env.stack.pop }
+        strings.reverse.each do |x|
+          function.rb_str_concat(str, x) # TODO: rb_str_append
+        end
+        env.stack.push(str)
       end
     end
 
@@ -414,7 +422,7 @@ class RubyVM
       iter_f = JIT::Function.compile(function.context, iter_signature) do |f|
         f.optimization_level = env.options.optimization_level
 
-        iter_arg = Ludicrous::IterArg.wrap(f, f.get_param(0))
+        iter_arg = Ludicrous::IterArg.wrap(f.get_param(0))
         inner_scope = Ludicrous::AddressableScope.load(
             f, iter_arg.scope, env.scope.local_names,
             env.scope.args, env.scope.rest_arg)
@@ -453,11 +461,14 @@ class RubyVM
       iter_c = function.const(JIT::Type::FUNCTION_PTR, iter_f.to_closure)
       body_c = function.const(JIT::Type::FUNCTION_PTR, body_f.to_closure)
       set_source(function)
+
       result = function.rb_iterate(iter_c, iter_arg.ptr, body_c, iter_arg.scope)
       return result
     end
 
     def ludicrous_iter_arg_assign(function, env, body, value)
+      # TODO: this isn't the right way to access array len/ptr
+      # anymore...
       len = function.ruby_struct_member(:RArray, :len, value)
       ptr = function.ruby_struct_member(:RArray, :ptr, value)
 
@@ -534,7 +545,7 @@ class RubyVM
         throwobj = env.stack.pop
 
         case state
-        when 0
+        when 0, Tag::RETRY
           # continue throw
           function.rb_jump_tag(state)
         when Tag::RETURN
