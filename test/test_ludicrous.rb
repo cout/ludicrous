@@ -1,5 +1,4 @@
-require 'test/unit/autorunner'
-require 'test/unit/testcase'
+require 'test/unit'
 require 'ludicrous'
 
 class TestLudicrous < Test::Unit::TestCase
@@ -152,6 +151,8 @@ class TestLudicrous < Test::Unit::TestCase
     compile_and_run(foo.new, :foo)
   end
 
+  # TODO: two_block_args_passed_one_value
+
   def test_two_block_args_passed_two_values
     foo = Class.new do
       include Test::Unit::Assertions
@@ -301,14 +302,17 @@ class TestLudicrous < Test::Unit::TestCase
       def foo
         retried = false
         begin
+          puts "in block, retried=#{retried}"
           if not retried then
             raise "FOO"
           else
             return
           end
         rescue
+          puts "in rescue, retried=#{retried}"
           if not retried then
             retried = true
+            puts "in rescue, setting retried=#{retried}"
             retry
           else
             assert false, "Retried more than once"
@@ -319,6 +323,26 @@ class TestLudicrous < Test::Unit::TestCase
     end
     compile_and_run(foo.new, :foo)
   end
+
+=begin
+  This doesn't work on YARV (syntax error), and retry is unimplemented
+  on 1.8.
+
+  def test_retry_in_iterator
+    foo = Class.new do
+      def foo
+        a = []
+        [1, 2, 3].each do |x|
+          a << x
+          retry if a.size < 5
+        end
+        return a
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal [1, 1, 1, 1, 1, 2, 3], result
+  end
+=end
 
   def test_when
     foo = Class.new do
@@ -685,7 +709,7 @@ if __FILE__ == $0 then
   Ludicrous.logger = Logger.new(STDERR)
 
   def disable_mini_unit_auto_run
-    Mini::Test.class_eval do
+    MiniTest::Unit.class_eval do
       alias :run_ :run
       def run(*args)
         return $mini_unit_exit_code
@@ -693,9 +717,9 @@ if __FILE__ == $0 then
     end 
   end
   
-  if defined?(Mini::Test) then
+  if defined?(MiniTest) then
     begin
-      exit Mini::Test.new.run(ARGV)
+      exit MiniTest::Unit.new.run(ARGV)
     ensure
       disable_mini_unit_auto_run
     end

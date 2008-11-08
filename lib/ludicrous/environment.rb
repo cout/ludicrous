@@ -181,8 +181,8 @@ class YarvEnvironment < YarvBaseEnvironment
   def branch(offset)
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_longjmp(offset) then
-      prepare_longjmp(*inside)
+    if inside = is_tag_jump(offset) then
+      prepare_tag_jump(*inside)
     end
     @function.insn_branch(@labels[offset])
   end
@@ -207,9 +207,9 @@ class YarvEnvironment < YarvBaseEnvironment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_longjmp(offset) then
+    if inside = is_tag_jump(offset) then
       @function.if(cond) {
-        prepare_longjmp(*inside)
+        prepare_tag_jump(*inside)
         @function.insn_branch(@labels[offset])
       }
     else
@@ -221,9 +221,9 @@ class YarvEnvironment < YarvBaseEnvironment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_longjmp(offset) then
+    if inside = is_tag_jump(offset) then
       @function.unless(cond) {
-        prepare_longjmp(*inside)
+        prepare_tag_jump(*inside)
         @function.insn_branch(@labels[offset])
       }
     else
@@ -269,7 +269,7 @@ class YarvEnvironment < YarvBaseEnvironment
     return @catch_table_state[catch_entry]
   end
 
-  def is_longjmp(offset)
+  def is_tag_jump(offset)
     currently_inside = inside_catch_entries(@pc.offset)
     jumping_inside = inside_catch_entries(offset)
 
@@ -280,7 +280,7 @@ class YarvEnvironment < YarvBaseEnvironment
     end
   end
 
-  def prepare_longjmp(currently_inside, jumping_inside)
+  def prepare_tag_jump(currently_inside, jumping_inside)
     (currently_inside - jumping_inside).reverse.each do |catch_entry|
       tag = @catch_table_tag[catch_entry]
       pop_tag(tag)
