@@ -181,7 +181,9 @@ class YarvEnvironment < YarvBaseEnvironment
   def branch(offset)
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    prepare_longjmp(offset)
+    if inside = is_longjmp(offset) then
+      prepare_longjmp(*inside)
+    end
     @function.insn_branch(@labels[offset])
   end
 
@@ -205,16 +207,28 @@ class YarvEnvironment < YarvBaseEnvironment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    prepare_longjmp(offset)
-    @function.insn_branch_if(cond, @labels[offset])
+    if inside = is_longjmp(offset) then
+      @function.if(cond) {
+        prepare_longjmp(*inside)
+        @function.insn_branch(@labels[offset])
+      }
+    else
+      @function.insn_branch_if(cond, @labels[offset])
+    end
   end
 
   def branch_relative_unless(cond, relative_offset)
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    prepare_longjmp(offset)
-    @function.insn_branch_if_not(cond, @labels[offset])
+    if inside = is_longjmp(offset) then
+      @function.unless(cond) {
+        prepare_longjmp(*inside)
+        @function.insn_branch(@labels[offset])
+      }
+    else
+      @function.insn_branch_if_not(cond, @labels[offset])
+    end
   end
  
   def push_tag(tag)
@@ -255,21 +269,31 @@ class YarvEnvironment < YarvBaseEnvironment
     return @catch_table_state[catch_entry]
   end
 
-  def prepare_longjmp(offset)
+  def is_longjmp(offset)
     currently_inside = inside_catch_entries(@pc.offset)
     jumping_inside = inside_catch_entries(offset)
 
-    currently_inside.reverse.each do |catch_entry|
+    if currently_inside == jumping_inside then
+      return false
+    else
+      return [ currently_inside, jumping_inside ]
+    end
+  end
+
+  def prepare_longjmp(currently_inside, jumping_inside)
+    (currently_inside - jumping_inside).reverse.each do |catch_entry|
       tag = @catch_table_tag[catch_entry]
       pop_tag(tag)
     end
 
-    jumping_inside.each do |catch_entry|
+    (jumping_inside - currently_inside).each do |catch_entry|
       tag = @catch_table_tag[catch_entry]
       push_tag(tag)
       state = exec_tag
       @catch_table_state[catch_entry].store(state)
     end
+
+    return true
   end
 
   def inside_catch_entries(offset)
