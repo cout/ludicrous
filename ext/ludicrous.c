@@ -599,8 +599,13 @@ void Init_ludicrous()
 #endif
   // TODO: capa, shared
 
+#ifdef HAVE_ST_RARRAY_LEN
   DEFINE_RUBY_STRUCT_MEMBER(RArray, len, jit_type_int);
+#endif
+
+#ifdef HAVE_ST_RARRAY_PTR
   DEFINE_RUBY_STRUCT_MEMBER(RArray, ptr, jit_type_void_ptr);
+#endif
   // TODO: capa, shared
 
   DEFINE_RUBY_STRUCT_MEMBER(RRegexp, ptr, jit_type_void_ptr);

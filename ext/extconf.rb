@@ -33,6 +33,14 @@ if have_struct_member("struct RString", "ptr", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RSTRING_PTR"
 end
 
+if have_struct_member("struct RArray", "len", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RARRAY_LEN"
+end
+
+if have_struct_member("struct RArray", "ptr", "ruby.h") then
+  $defs[-1] = "-DHAVE_ST_RARRAY_PTR"
+end
+
 if have_struct_member("struct RRegexp", "len", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RREGEXP_LEN"
 end
