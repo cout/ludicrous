@@ -422,14 +422,6 @@ def ludicrous_assign(function, env, lhs, v)
   end
 end
 
-def ludicrous_block_assign(function, env, lhs, v)
-  if not (MASGN === lhs) then
-    v = v.avalue_splat
-  end
-
-  ludicrous_assign(function, env, lhs, v)
-end
-
 def ludicrous_svalue_to_mrhs(function, env, multi_lhs, v)
   if not v then
     return function.rb_ary_new()
