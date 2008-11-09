@@ -272,7 +272,7 @@ class RubyVM
           env.stack.push(remainder)
         end
         (num-1).downto(0) do |i|
-          env.stack.push(function.rb_ary_at(ary, i))
+          env.stack.push(function.rb_ary_entry(ary, i))
         end
       end
     end
