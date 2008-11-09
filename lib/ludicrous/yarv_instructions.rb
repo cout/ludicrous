@@ -1,5 +1,6 @@
 require 'ludicrous/yarv_vm'
 require 'ludicrous/iter_loop'
+require 'ludicrous/ruby_types'
 require 'internal/vm/constants'
 
 class RubyVM
@@ -466,23 +467,47 @@ class RubyVM
       return result
     end
 
-    def ludicrous_iter_arg_assign(function, env, body, value)
-      # TODO: this isn't the right way to access array len/ptr
-      # anymore...
-      len = function.ruby_struct_member(:RArray, :len, value)
-      ptr = function.ruby_struct_member(:RArray, :ptr, value)
+    def ludicrous_iter_arg_assign(function, env, body, rhs)
+      function.if(rhs == nil) {
+        for i in 0...(body.argc) do
+          env.scope.dyn_set(body.local_table[i], nil)
+        end
+      }.else {
 
-      if not body.arg_simple then
-        raise "Cannot handle non-simple block arguments"
-      end
+        array = Ludicrous::RArray.wrap(rhs)
 
-      # TODO: size check?
-      for i in 0...(body.argc) do
-        # TODO: make sure the block argument is local to this scope
-        idx = function.const(JIT::Type::INT, i)
-        value = function.insn_load_elem(ptr, idx, JIT::Type::OBJECT)
-        env.scope.dyn_set(body.local_table[i], value)
-      end
+        if not body.arg_simple then
+          raise "Cannot handle non-simple block arguments"
+        end
+
+        # TODO: size check?
+        for i in 0...(body.argc - 1) do
+          # TODO: make sure the block argument is local to this scope
+          idx = function.const(:INT, i)
+          value = function.value(:OBJECT)
+          function.if(idx < array.len) {
+            value.store array[idx]
+          }.else {
+            value.store function.const(:OBJECT, nil)
+          }.end
+          env.scope.dyn_set(body.local_table[i], value)
+        end
+
+        if body.argc > 0 then
+          i = body.argc - 1
+          idx = function.const(:INT, i)
+          function.if(idx < array.len) {
+            # TODO: not 64-bit safe
+            ary = function.rb_ary_new4(
+                array.len - i,
+                array.ptr + (i << 2))
+            value.store(ary.avalue_splat)
+          }.else {
+            value.store(function.const(:OBJECT, nil))
+          }.end
+          env.scope.dyn_set(body.local_table[i], value)
+        end
+      }.end
     end
 
     class SEND

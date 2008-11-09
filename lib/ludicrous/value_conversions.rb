@@ -95,11 +95,12 @@ class Value
   # [ obj1, obj2, ... ] -> self
   def avalue_splat
     result = self.function.value(JIT::Type::OBJECT)
-    num_args = self.function.ruby_struct_member(:RArray, :len, self)
+    array = Ludicrous::RArray.wrap(self)
+    num_args = array.len
     function.if(num_args == function.const(JIT::Type::INT, 0)) {
       result.store(self.function.const(JIT::Type::OBJECT, nil))
     } .elsif(num_args == function.const(JIT::Type::INT, 1)) {
-      array_ptr = self.function.ruby_struct_member(:RArray, :ptr, self)
+      array_ptr = array.ptr
       result.store(function.insn_load_relative(array_ptr, 0, JIT::Type::OBJECT))
     } .else {
       result.store(self)
