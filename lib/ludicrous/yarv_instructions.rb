@@ -282,11 +282,16 @@ class RubyVM
         # TODO: possible to optimize this
         num = @operands[0]
         env.stack.sync_sp()
+
+        values = (0...num).map { env.stack.pop }
+        values.reverse!
+
         ary = function.rb_ary_new2(num)
-        num.times do
+        values.each do |value|
           env.stack.sync_sp
-          function.rb_ary_push(ary, env.stack.pop)
+          function.rb_ary_push(ary, value)
         end
+
         env.stack.push(ary)
       end
     end
