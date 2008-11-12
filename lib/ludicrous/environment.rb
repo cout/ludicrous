@@ -104,6 +104,10 @@ class ProgramCounter
   def advance(instruction_length)
     @offset += instruction_length
   end
+
+  def reset()
+    @offset = 0
+  end
 end
 
 class YarvBaseEnvironment < Environment
@@ -172,6 +176,7 @@ class YarvEnvironment < YarvBaseEnvironment
     # might jump to
     @labels[@pc.offset] ||= JIT::Label.new
     @function.insn_label(@labels[@pc.offset])
+    scope.local_get(:n)
   end
 
   def get_label(offset)
