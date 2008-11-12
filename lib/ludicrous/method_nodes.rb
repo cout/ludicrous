@@ -140,6 +140,8 @@ class MethodNodeCompiler
           end
           raise
         end
+
+        # puts f.dump
       end
     end
 
@@ -221,17 +223,17 @@ class VariableArgumentsCompiler < ArgumentsCompiler
   end
 
   def compile_assign_rest_argument(env, arg, idx, argc, argv)
-    var_idx = env.function.const(JIT::Type::INT, idx)
+    var_idx = env.function.const(:INT, idx)
+    rest = env.function.value(:INT)
     env.function.if(argc > var_idx) {
       # TODO: not 64-bit safe?
-      rest = env.function.rb_ary_new4(
+      rest.store env.function.rb_ary_new4(
           argc - var_idx,
           argv + var_idx * env.function.const(JIT::Type::UINT, 4))
-      env.scope.rest_arg_set(arg.name, rest)
     } .else {
-      rest = env.function.rb_ary_new()
-      env.scope.rest_arg_set(arg.name, rest)
+      rest.store env.function.rb_ary_new()
     } .end
+    env.scope.rest_arg_set(arg.name, rest)
   end
 
   def compile_assign_block_argument(env, arg, idx, argc, argv)
@@ -330,11 +332,14 @@ class METHOD
   end
 
   def ludicrous_compile_optional_default(env, arg)
+    local_table_idx = arg.local_table_idx()
     arg.iseq.each(arg.pc_start) do |instruction|
       arg.iseq.ludicrous_compile_next_instruction(
           env.function,
           env,
           instruction)
+      break if RubyVM::Instruction::SETLOCAL === instruction &&
+        instruction.operands[0] == local_table_idx
     end
   end
 
@@ -352,7 +357,9 @@ class METHOD
     result = compiler.compile do |function, env|
       if self.body.arg_opt_table.size > 0 then
         # TODO: we can remove this in the future
-        env.branch(self.body.arg_opt_table[-1])
+        offset = self.body.arg_opt_table[-1]
+        insn = self.body.each(offset) { |insn| break insn }
+        env.branch(offset + insn.length)
       end
 
       # LEAVE instruction should generate return instruction
