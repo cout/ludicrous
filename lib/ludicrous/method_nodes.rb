@@ -334,20 +334,21 @@ class METHOD
   def ludicrous_compile_optional_default(env, arg)
     local_table_idx = arg.local_table_idx()
     arg.iseq.each(arg.pc_start) do |instruction|
+      break if RubyVM::Instruction::SETLOCAL === instruction &&
+        instruction.operands[0] == local_table_idx
       arg.iseq.ludicrous_compile_next_instruction(
           env.function,
           env,
           instruction)
-      break if RubyVM::Instruction::SETLOCAL === instruction &&
-        instruction.operands[0] == local_table_idx
     end
+    return env.stack.pop
   end
 
   def ludicrous_compile_into_function(
       origin_class,
       compile_options = Ludicrous::CompileOptions.new)
 
-    # puts self.body.disasm
+    puts self.body.disasm
 
     compiler = MethodNodeCompiler.new(
         self,
