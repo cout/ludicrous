@@ -4,7 +4,7 @@ require 'internal/tag'
 class RubyVM
   class InstructionSequence
     def ludicrous_compile(function, env)
-      puts self.disasm
+      env.pc.reset()
 
       if self.catch_table.size > 0 then
         self.ludicrous_compile_body_with_catch(function, env)
@@ -125,6 +125,7 @@ class RubyVM
     end
 
     def ludicrous_compile_next_instruction(function, env, instruction)
+      env.make_label
       # env.stack.sync_sp
       msg = "#{'%04d' % env.pc.offset} " +
             "#{'%x' % self.object_id} " +
@@ -132,7 +133,6 @@ class RubyVM
       # puts msg
       function.debug_print_msg(msg)
       # function.debug_inspect_object instruction
-      env.make_label
       env.pc.advance(instruction.length)
       instruction.ludicrous_compile(function, env)
       # env.stack.sync_sp
