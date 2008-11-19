@@ -489,7 +489,6 @@ void Init_ludicrous()
   DEFINE_FUNCTION_POINTER(rb_ary_pop);
   DEFINE_FUNCTION_POINTER(rb_ary_store);
   DEFINE_FUNCTION_POINTER(rb_ary_entry);
-  DEFINE_FUNCTION_POINTER(rb_ary_at);
   DEFINE_FUNCTION_POINTER(rb_ary_concat);
   DEFINE_FUNCTION_POINTER(rb_ary_to_ary);
   DEFINE_FUNCTION_POINTER(rb_ary_dup);
