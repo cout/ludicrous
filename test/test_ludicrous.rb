@@ -708,6 +708,8 @@ if __FILE__ == $0 then
   require 'logger'
   Ludicrous.logger = Logger.new(STDERR)
 
+  $mini_unit_exit_code = 0
+
   def disable_mini_unit_auto_run
     MiniTest::Unit.class_eval do
       alias :run_ :run
