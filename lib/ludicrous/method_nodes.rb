@@ -359,7 +359,7 @@ class METHOD
       if self.body.arg_opt_table.size > 0 then
         # TODO: we can remove this in the future
         offset = self.body.arg_opt_table[-1]
-        insn = self.body.each(offset) { |insn| break insn }
+        insn = self.body.each(offset) { |i| break i }
         env.branch(offset + insn.length)
       end
 
