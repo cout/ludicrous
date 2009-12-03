@@ -875,7 +875,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
   iter_f = JIT::Function.compile(function.context, iter_signature) do |f|
     f.optimization_level = env.options.optimization_level
 
-    iter_arg = Ludicrous::ITER_ARG_TYPE.wrap(f, f.get_param(0))
+    iter_arg = Ludicrous::ITER_ARG_TYPE.wrap(f.get_param(0))
     outer_scope_obj = iter_arg.scope
     inner_recv = iter_arg.recv
     inner_scope = Ludicrous::AddressableScope.load(
