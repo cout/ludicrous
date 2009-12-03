@@ -77,7 +77,11 @@ static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name
       struct_name);
   if(member_name_info == Qnil)
   {
-    rb_raise(rb_eArgError, "Invalid struct name");
+    VALUE s_struct_name = rb_funcall(struct_name, rb_intern("to_s"), 0);
+    rb_raise(
+        rb_eArgError,
+        "Invalid struct name %s",
+        StringValueCStr(s_struct_name));
   }
 
   VALUE member_info_v = rb_hash_aref(
@@ -85,7 +89,11 @@ static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name
       member_name);
   if(member_info_v == Qnil)
   {
-    rb_raise(rb_eArgError, "Invalid member name");
+    VALUE s_member_name = rb_funcall(member_name, rb_intern("to_s"), 0);
+    rb_raise(
+        rb_eArgError,
+        "Invalid member name %s",
+        StringValueCStr(s_member_name));
   }
 
   struct Member_Info * member_info;
