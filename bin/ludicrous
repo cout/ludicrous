@@ -1,4 +1,4 @@
-#! /usr/local/bin/ruby1.9
+#! /usr/bin/ruby1.8
 
 require 'ludicrous'
 require 'optparse'
@@ -27,7 +27,7 @@ class LudicrousRunner
     @dash_e = []
     @require = []
     @cd = nil
-    @options = Ludicrous::Options.new
+    @options = Ludicrous::CompileOptions.new
     @ruby_prof = false
     @ruby_prof_printer = "FlatPrinter"
     @ruby_prof_file = nil
@@ -284,9 +284,14 @@ class LudicrousRunner
 end
 
 if __FILE__ == $0 then
+  puts "HERE"
   binding = binding()
+  puts "HERE"
   toplevel_self = self
+  puts "HERE"
   runner = LudicrousRunner.new(ARGV, binding, toplevel_self)
+  puts "HERE"
   runner.run
+  puts "HERE"
 end
 
