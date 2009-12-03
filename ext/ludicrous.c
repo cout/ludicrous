@@ -690,7 +690,7 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(RData, dfree, jit_type_void_ptr); // TODO: function ptr
   DEFINE_RUBY_STRUCT_MEMBER(RData, data, jit_type_void_ptr);
 
-#ifdef HAVE_TYPE_FRAME
+#ifdef HAVE_TYPE_STRUCT_FRAME
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, self, jit_type_uint);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, argc, jit_type_int);
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, last_func, jit_type_uint);
@@ -704,7 +704,7 @@ void Init_ludicrous()
   DEFINE_RUBY_STRUCT_MEMBER(FRAME, uniq, jit_type_uint);
 #endif
 
-#ifdef HAVE_TYPE_SCOPE
+#ifdef HAVE_TYPE_STRUCT_SCOPE
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_tbl, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, local_vars, jit_type_void_ptr);
   DEFINE_RUBY_STRUCT_MEMBER(SCOPE, flags, jit_type_int);

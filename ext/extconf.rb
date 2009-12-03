@@ -65,8 +65,8 @@ if have_struct_member("struct RHash", "tbl", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RHASH_TBL"
 end
 
-have_type("FRAME", [ "ruby.h", "env.h" ])
-have_type("SCOPE", [ "ruby.h", "env.h" ])
+have_type("struct FRAME", [ "ruby.h", "env.h" ])
+have_type("struct SCOPE", [ "ruby.h", "env.h" ])
 
 if have_header('ruby/node.h') then
   # ruby.h defines HAVE_RUBY_NODE_H, even though it is not there
