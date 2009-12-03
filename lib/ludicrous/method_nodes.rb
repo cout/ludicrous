@@ -66,6 +66,7 @@ def ludicrous_scope_info
     member = self[name]
     if Node === member then
       member_needs_addressable_scope, member_vars = member.ludicrous_scope_info
+      # puts "#{member.class} #{member.nd_file}:#{member.nd_line} #{member_vars.inspect}"
       needs_addressable_scope ||= member_needs_addressable_scope
       vars.concat(member_vars)
     end
@@ -264,10 +265,12 @@ class VariableArgumentsCompiler < ArgumentsCompiler
   end
 end
 
+# Ruby 1.8 / MRI
 class SCOPE
   def ludicrous_create_scope(compiler, function)
+    require 'internal/node/pp'
     needs_addressable_scope, var_names = self.next.ludicrous_scope_info
-    var_names.concat compiler.arg_names
+    var_names.concat(self.tbl || [])
     var_names.uniq!
 
     scope_type = needs_addressable_scope \
@@ -308,6 +311,7 @@ class SCOPE
   end
 end
 
+# Ruby 1.9 / YARV
 class METHOD
   def ludicrous_create_scope(compiler, function)
     needs_addressable_scope = true # TODO
