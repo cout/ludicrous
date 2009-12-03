@@ -284,14 +284,9 @@ class LudicrousRunner
 end
 
 if __FILE__ == $0 then
-  puts "HERE"
   binding = binding()
-  puts "HERE"
   toplevel_self = self
-  puts "HERE"
   runner = LudicrousRunner.new(ARGV, binding, toplevel_self)
-  puts "HERE"
   runner.run
-  puts "HERE"
 end
 
