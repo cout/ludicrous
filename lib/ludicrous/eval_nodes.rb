@@ -1697,11 +1697,15 @@ end
 
 class NTH_REF
   def ludicrous_compile(function, env)
-    cnt = function.const(JIT::Type::INT, self.cnt)
-    p_match_data = function.rb_svar(cnt)
-    match_data = function.insn_load_relative(p_match_data, 0, JIT::Type::OBJECT)
-    nth = function.const(JIT::Type::INT, self.nth)
-    return function.rb_reg_nth_match(nth, match_data)
+    # cnt = function.const(JIT::Type::INT, self.cnt)
+    # p_match_data = function.rb_svar(cnt)
+    # match_data = function.insn_load_relative(p_match_data, 0, JIT::Type::OBJECT)
+    # nth = function.const(JIT::Type::INT, self.nth)
+    # return function.rb_reg_nth_match(nth, match_data)
+
+    # TODO: We can't supported $1..$9 inside a block, so for now it's
+    # disabled altogether
+    raise "$#{self.cnt} not supported"
   end
 end
 
