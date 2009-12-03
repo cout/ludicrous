@@ -14,7 +14,7 @@ tests = {
   'test_comparable'  => :TestComparable,
   'test_exception'   => :TestException,
   'test_false_class' => :TestFalseClass,
-  'test_file_test'   => :TestFileTest,
+  # 'test_file_test'   => :TestFileTest,
   'test_hash'        => :TestHash,
   'test_nil_class'   => :TestNilClass,
   'test_range'       => :TestRange,
@@ -27,17 +27,9 @@ tests = {
 # These tests fail without JIT, so we shouldn't expect them to pass with
 # JIT
 known_to_fail = [
-  'TestFileTest#test_class_blockdev_eh',
-  'TestFileTest#test_class_chardev_eh',
-  'TestFileTest#test_class_exist_eh',
-  'TestFileTest#test_class_exists_eh',
-  'TestFileTest#test_class_file_eh',
-  'TestFileTest#test_class_setuid_eh',
-  'TestFileTest#test_class_size',
-  'TestFileTest#test_class_size_eh',
-  'TestFileTest#test_class_symlink_eh',
-  'TestFileTest#test_class_zero_eh',
+  'TestArray#test_spaceship',
   'TestString#test_inspect',
+  'TestStruct#test_each',
   'TestTime#test_class_now',
   'TestTime#test_initialize',
   'TestTime#test_inspect',
@@ -60,10 +52,10 @@ end
 tests.each do |feature, klass_name|
   require feature
   klass = Object.const_get(klass_name)
-  klass.instance_methods(false).sort.each do |name|
+  klass.instance_methods(true).sort.each do |name|
     full_name = "#{klass}##{name}"
     if known_to_fail.include?(full_name) then
-      klass.instance_eval { remove_method(name) }
+      klass.instance_eval { undef_method(name) }
       next
     end
   end
