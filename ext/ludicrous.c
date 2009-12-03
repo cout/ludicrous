@@ -324,7 +324,6 @@ static VALUE ludicrous_splat_iterate_proc(
 
 static VALUE block_pass_fcall(VALUE recv, ID mid, VALUE args, VALUE proc)
 {
-  printf("NODE_BLOCK_PASS=%d\n", NODE_BLOCK_PASS);
 #ifdef RUBY_VM
   /* TODO: need to set filename on node for 1.9 */
   /* TODO: would be better to construct an iseq directly */
