@@ -989,7 +989,6 @@ def ludicrous_iter_splat_proc(function, env, lhs, body)
     ruby_scope = f.ruby_scope()
     local_vars_type = JIT::Array.new(JIT::Type::OBJECT, 4)
     local_vars = local_vars_type.wrap(
-        f,
         f.ruby_struct_member(:SCOPE, :local_vars, ruby_scope))
 
     value = local_vars[2]

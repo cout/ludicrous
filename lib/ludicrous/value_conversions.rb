@@ -1,3 +1,5 @@
+require 'ludicrous/ruby_types'
+
 module JIT
 
 class Value
