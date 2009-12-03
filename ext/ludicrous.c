@@ -26,6 +26,9 @@ static VALUE rb_errinfo()
 }
 #endif
 
+/* No longer part of the public API on ruby 1.8.7? */
+VALUE rb_proc_new _((VALUE (*)(ANYARGS/* VALUE yieldarg[, VALUE procarg] */), VALUE));
+
 /* Defined in ruby-internal */
 #ifdef RUBY_VM
 #include <setjmp.h>
