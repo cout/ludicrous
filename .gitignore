@@ -1,1 +1,7 @@
+.config
 InstalledFiles
+ext/*.o
+ext/*.so
+ext/Makefile
+ext/mkmf.log
+ludicrous-*.gem
