@@ -9,6 +9,9 @@ spec = Gem::Specification.new do |s|
   s.author = 'Paul Brannan'
   s.email = 'curlypaul924@gmail.com'
 
+  s.add_dependency 'ruby-internal' => '>= 0.6.0'
+  s.add_dependency 'ruby-libjit'   => '>= 0.2.0'
+
   s.description = <<-END
 Ludicrous is a just-in-time (JIT) compiler that works with the Ruby 1.8
 and 1.9 series interpreters.  It works by walking the AST or bytecode
