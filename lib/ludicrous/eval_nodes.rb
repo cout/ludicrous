@@ -901,8 +901,7 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
     inner_env = Ludicrous::Environment.new(
         f, env.options, env.cbase, inner_scope)
 
-    loop = Ludicrous::IterLoop.new(f)
-    r = inner_env.iter(loop) {
+    r = inner_env.iter { |loop|
       ludicrous_assign(f, inner_env, lhs, value)
 
       if body then
@@ -952,8 +951,7 @@ def ludicrous_iter_proc(function, env, lhs, body)
       value = value.avalue_splat
     end
 
-    loop = Ludicrous::IterLoop.new(f)
-    r = inner_env.iter(loop) {
+    r = inner_env.iter { |loop|
       ludicrous_assign(f, inner_env, lhs, value)
 
       if body then
@@ -999,8 +997,7 @@ def ludicrous_iter_splat_proc(function, env, lhs, body)
     inner_env = Ludicrous::Environment.new(
         f, env.options, env.cbase, inner_scope)
 
-    loop = Ludicrous::IterLoop.new(f)
-    r = inner_env.iter(loop) {
+    r = inner_env.iter { |loop|
       ludicrous_assign(f, inner_env, lhs, value.avalue_splat)
 
       if body then

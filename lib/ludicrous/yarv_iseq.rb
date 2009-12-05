@@ -1,4 +1,5 @@
 require 'ludicrous/yarv_vm'
+require 'ludicrous/yarv_environment'
 require 'internal/tag'
 
 class RubyVM

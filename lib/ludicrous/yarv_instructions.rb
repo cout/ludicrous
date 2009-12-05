@@ -1,4 +1,5 @@
 require 'ludicrous/yarv_vm'
+require 'ludicrous/yarv_environment'
 require 'ludicrous/iter_loop'
 require 'ludicrous/ruby_types'
 require 'internal/vm/constants'
@@ -454,8 +455,7 @@ class RubyVM
         inner_env = Ludicrous::YarvEnvironment.new(
             f, env.options, env.cbase, inner_scope, body)
 
-        loop = Ludicrous::IterLoop.new(f)
-        inner_env.iter(loop) {
+        inner_env.iter { |loop|
           ludicrous_iter_arg_assign(f, inner_env, body, value)
           body.ludicrous_compile(f, inner_env)
         }
