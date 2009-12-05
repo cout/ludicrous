@@ -1149,7 +1149,7 @@ class FOR
 
     case iterate_style
     when :fast
-      v = ludicrous_iterate(function, env, self.var, self.body, recv) do |f, inner_env, recv|
+      v = ludicrous_iterate_fast(function, env, self.var, self.body, recv) do |f, inner_env, recv|
         self.iter.set_source(f)
         f.rb_funcall(recv, :each)
       end
