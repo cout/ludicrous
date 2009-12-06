@@ -1,28 +1,46 @@
 module Ludicrous
+  # An abstraction for a ruby RBasic object.  All objects "inherit" from
+  # RBasic using C-style inheritance (composition).
   class RBasic < JIT::Value
+    # Given a pointer to an RBasic struct, return an RBasic wrapper for
+    # the object.
+    #
+    # +objref+:: a pointer to the RBasic struct 
     def self.wrap(objref)
       value = self.new_value(objref.function, JIT::Type::VOID_PTR)
       value.store(objref)
       return value
     end
 
+    # Returns the +flags+ member of the +RBasic+ struct.
     def flags
       return function.ruby_struct_member(:RBasic, :flags, self)
     end
 
+    # Returns the +klass+ member of the +RBasic+ struct.
     def klass
       return function.ruby_struct_member(:RBasic, :klass, self)
     end
   end
 
+  # A "normal" ruby object (e.g. not a NODE or an immutable immediate
+  # value)
   class RObject < RBasic
   end
 
+  # An abstraction for an RArray struct (the C type used to hold an
+  # array).
   class RArray < RObject
+    # Emits code to retrieve the object reference at position +idx+
+    # within the array.
+    #
+    # +idx+:: the index of the object reference to retrieve.
     def [](idx)
       return function.insn_load_elem(ptr(), idx, JIT::Type::OBJECT)
     end
 
+    # Returns a JIT::Value with the length of the array (similar to the
+    # C RARRAY_LEN macro).
     def len
       @len ||= len_
       return @len
@@ -53,6 +71,8 @@ module Ludicrous
     end
     private :len_
 
+    # Returns a C pointer to the first element of the array (similar to
+    # the C RARRAY_PTR macro).
     def ptr
       @ptr ||= ptr_
     end
