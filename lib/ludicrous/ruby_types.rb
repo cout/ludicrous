@@ -1,3 +1,5 @@
+require 'ludicrous/native_functions'
+
 module Ludicrous
   # An abstraction for a ruby RBasic object.  All objects "inherit" from
   # RBasic using C-style inheritance (composition).
@@ -37,6 +39,21 @@ module Ludicrous
     # +idx+:: the index of the object reference to retrieve.
     def [](idx)
       return function.insn_load_elem(ptr(), idx, JIT::Type::OBJECT)
+    end
+
+    # Emits code to set the element at position +idx+ within the array.
+    #
+    # +idx+:: the index of the object reference to set.
+    # +value+:: the new value of the element.
+    def []=(idx, value)
+      return function.insn_store_elem(ptr(), idx, value)
+    end
+
+    # Emits code to concatenate the given array onto this array.
+    #
+    # +ary+:: the RArray to concatenate
+    def concat(ary)
+      return self.function.rb_ary_concat(self, ary)
     end
 
     # Returns a JIT::Value with the length of the array (similar to the
