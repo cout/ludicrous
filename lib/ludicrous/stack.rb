@@ -1,5 +1,23 @@
 module Ludicrous
 
+# Base class for all Stack objects.  Adds some convenience methods,
+# requiring the derived class to implement a small interface:
+#
+# +each+:: iterate over all stack elements
+# +sync_sp+:: if necessary, synchronize the stack pointer so that YARV and
+# Ludicrous are sharing the same stack
+# +topn+:: get the nth member from the top of the stack (index 1 is the
+# top of the stack)
+# +setn+:: set the nth member from the top of the stack (index 1 is the
+# top of the stack)
+# +popn+:: pop n members from the top of the stack (or push -n members
+# onto the stack)
+# +validate_branch+:: validate that a branch to dest is allowed with the
+# given type of stack (a StaticStack cannot handle certain types of
+# branches)
+# +static?+:: returns true if this is a StaticStack
+#
+# TODO: should perhaps be a mixin?
 class Stack
   # Get the top member of the stack
   def top
@@ -60,9 +78,17 @@ class Stack
   def validate_branch(dest)
     raise NotImplementedError, "derived class must implement"
   end
+
+  def static?
+    raise NotImplementedError, "derived class must implement"
+  end
 end
 
 class StaticStack < Stack
+  # Create a new StaticStack.
+  #
+  # +function+:: the JIT::Function currently being compiled
+  # +pc+:: the method's ProgramCounter
   def initialize(function, pc)
     @function = function
     @pc = pc
@@ -111,12 +137,17 @@ class StaticStack < Stack
     end
   end
 
+  # Iterate over all stack elements.
+  #
+  # For each element, yields a JIT::Value for that stack element.
   def each
     @stack.reverse.each do |value|
       yield value
     end
   end
 
+  # +validate_branch+:: validate that a branch to dest is allowed.  A
+  # StaticStack cannot handle certain types of branches.
   def validate_branch(dest)
     # Validate that there are no items left on the stack that were
     # created inside the loop
@@ -131,6 +162,7 @@ class StaticStack < Stack
     # generate any code that allows it)
   end
 
+  # Returns true
   def static?
     return true
   end
@@ -216,6 +248,9 @@ class YarvStack < Stack
     return nil
   end
 
+  # Iterate over all stack elements.
+  #
+  # For each element, yields a JIT::Value for that stack element.
   def each
     last = @size
     @function.while { idx <= last }.do {
@@ -224,10 +259,13 @@ class YarvStack < Stack
     }.end
   end
 
+  # +validate_branch+:: validate that a branch to dest is allowed.  A
+  # YarvStack allows all branches.
   def validate_branch(dest)
     # no-op
   end
 
+  # Returns false
   def static?
     return false
   end
