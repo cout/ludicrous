@@ -1,3 +1,6 @@
+# Helper methods for emitting code to print values as a compiled
+# function executes.
+
 require 'ludicrous/native_functions'
 
 module JIT
