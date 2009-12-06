@@ -29,7 +29,7 @@ class Value
   # Return a constant holding the bit pattern for the Fixnum flag (the
   # least significant bit in an object reference indicates whether a
   # given object reference is a Fixnum).
-  def Fixnum_flag
+  def fixnum_flag
     return self.function.const(JIT::Type::INT, 1)
   end
 
@@ -37,8 +37,8 @@ class Value
   #
   # Return a constant JIT::Value containing a nonzero value if this
   # value holds a Fixnum or a constant containing 0 otherwise.
-  def is_Fixnum
-    return self & Fixnum_flag
+  def is_fixnum
+    return self & fixnum_flag
   end
 
   # Emit code to convert the value from a C integer to a Fixnum.
@@ -46,7 +46,7 @@ class Value
   # Returns a JIT::Value holding a Fixnum.
   def int2fix
     one = self.function.const(JIT::Type::INT, 1)
-    return (self << one) | Fixnum_flag
+    return (self << one) | fixnum_flag
   end
 
   # Emit code to convert the value from a Fixnum to a C integer.
