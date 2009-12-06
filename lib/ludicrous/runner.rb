@@ -14,17 +14,33 @@ end
 
 module Ludicrous
 
+# The command-line version of ludicrous, which compiles all
+# modules/methods in the system the.  This class is not normally invoked
+# directly by the user.
 class Runner
   COPYRIGHT = "TODO"
   VERSION = "TODO"
 
+  # Called by the ludicrous executable to run an ruby program.
+  #
+  # +args+:: the ARGV that was passed to the ludicrous executable
+  # +binding+:: a binding that was created at the toplevel
+  # +toplevel_self+:: the toplevel self
+  # +call_toplevel+:: a proc object that can be used to appply a
+  # JIT::Function at the toplevel.
   def self.run(args, binding, toplevel_self, call_toplevel)
-    runner = self.new(args, binding, toplevel_self, call_toplevel)
+    runner = self.new(binding, toplevel_self, call_toplevel)
+    runner.parse(args)
     return runner.run
   end
 
-  def initialize(args, binding, toplevel_self, call_toplevel)
-    @args = args
+  # Create a new Ludicrous::Runner.
+  #
+  # +binding+:: a binding that was created at the toplevel
+  # +toplevel_self+:: the toplevel self
+  # +call_toplevel+:: a proc object that can be used to appply a
+  # JIT::Function at the toplevel.
+  def initialize(binding, toplevel_self, call_toplevel)
     @binding = binding
     @call_toplevel = call_toplevel
     @toplevel_self = toplevel_self
@@ -35,9 +51,11 @@ class Runner
     @ruby_prof = false
     @ruby_prof_printer = "FlatPrinter"
     @ruby_prof_file = nil
-    parse(args)
   end
 
+  # Parse the command-line arguments.
+  #
+  # +args+:: the ARGV that was passed to the ludicrous executable
   def parse(args)
     opts = OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} [switches] [--] [programfile] [arguments]"
@@ -159,6 +177,9 @@ class Runner
     end
   end
 
+  # Turn on JIT logging for levels +lvl+ and above.
+  #
+  # +lvl+:: the minimum level to log
   def enable_jit_log(lvl)
     Ludicrous.logger = Logger.new(STDERR)
     Ludicrous.logger.formatter = proc { |level, time, progname, msg|
@@ -169,6 +190,10 @@ class Runner
     end
   end
 
+  # Turn on JIT for all modules in the system.  If precompiling is
+  # enabled, they will be compiled now, otherwise a stub method is
+  # installed now and each method will be compiled the first time it is
+  # called.
   def jit_compile_all_modules
     # TODO: Not sure why this one has to come first...
     jit_compile_module(Module)
@@ -191,10 +216,14 @@ class Runner
     jit_compile_module(Object)
   end
 
+  # Turn on JIT for a specific module using +Module#go_plaid+.
+  #
+  # +m+:: the module to enable JIT compilation for.
   def jit_compile_module(m)
     m.go_plaid(@options)
   end
 
+  # Run the program that was passed to the ludicrous executable.
   def run
     if @ruby_prof then
       begin
@@ -255,6 +284,11 @@ class Runner
   end
   private :run_
 
+  # Run the given program at the toplevel as a compiled program if
+  # possible, or as an interpreted program if compilation fails.
+  #
+  # +program+:: a String containing the program to be run
+  # +filename+:: the filename of the program to be run
   def run_toplevel(program, filename)
     if f = compile_toplevel(program, filename) then
       return run_toplevel_compiled(f)
@@ -263,14 +297,25 @@ class Runner
     end
   end
 
+  # Run the given program at the toplevel as a compiled program.
+  #
+  # +f+:: a JIT::Function with the compiled toplevel program
   def run_toplevel_compiled(f)
     @call_toplevel.call(f)
   end
 
+  # Run the given program at the toplevel as an interpreted program.
+  #
+  # +program+:: a String containing the program to be run
+  # +filename+:: the filename of the program to be run
   def run_toplevel_interpreted(program, filename)
     eval(program, @binding, filename)
   end
 
+  # Compile the given toplevel program.
+  #
+  # +program+:: a String containing the program to be run
+  # +filename+:: the filename of the program to be run
   def compile_toplevel(program, filename)
     f = nil
     begin
