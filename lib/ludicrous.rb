@@ -3,7 +3,6 @@
 # To use it, include the Ludicrous::JITCompiled module in your class or
 # module, or call Module#ludicrous_compile_method to compile an
 # individual method.
-#
 
 require 'thread'
 require 'internal/node'
