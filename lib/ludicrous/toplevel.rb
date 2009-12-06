@@ -1,3 +1,6 @@
+# Code for compiling toplevel ruby code (that is, code not found inside
+# a method).
+
 require 'ludicrous/yarv_vm'
 require 'ludicrous/compile_options'
 
