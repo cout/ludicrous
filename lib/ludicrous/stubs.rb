@@ -1,6 +1,23 @@
+# Helpers for compiling methods and modules.
+#
+# Most methods here should not be called directly; instead, mixin the
+# Ludicrous::JITCompiled module or call Module#ludicrous_compile or
+# Module#ludicrous_compile_method to compile a class or method.
+
 module Ludicrous
 
 module JITCompiled
+  # Compile a function for which a stub has been installed.
+  #
+  # Removes the stub if compilation fails.
+  #
+  # This method should not normally be called by the user.
+  #
+  # +klass+:: the class or module the method is a member of
+  # +method+:: the Method object for the method to compile
+  # +name+:: a Symbol with the _current_ name of the method (it gets
+  # aliased when the stub is installed)
+  # +orig_name+:: a Symbol with the name of the method's stub
   def self.jit_compile_stub(klass, method, name, orig_name)
     tmp_name = "ludicrous__tmp__#{name}".intern
 
@@ -31,6 +48,13 @@ module JITCompiled
     klass.__send__(:remove_const, "HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}")
   end
 
+  # Compile a method right now and replace it with a compiled version.
+  #
+  # +klass+:: the class or module the method is a member of
+  # +name+:: a Symbol with the name of the method
+  # +method+:: a Method or UnboundMethod for the method to be compiled
+  # +success+:: a callback to be called if compilation is successful
+  # +failure+:: a callback to be called if compilation fails
   def self.jit_compile_method(
         klass,
         name,
@@ -63,6 +87,18 @@ module JITCompiled
     end
   end
 
+  # Create a proc that when called will compile a method for which a
+  # stub has been installed.
+  #
+  # Returns the proc.
+  #
+  # This method should not normally be called by the user.
+  #
+  # +klass+:: the class or module the method is a member of
+  # +name+:: a Symbol with the _current_ name of the method (it gets
+  # aliased when the stub is installed)
+  # +method+:: a Method or UnboundMethod for the method to be compiled
+  # +orig_name+:: a Symbol with the name of the method's stub
   def self.compile_proc(klass, method, name, orig_name)
     m = Mutex.new
     compile_proc = proc {
@@ -79,6 +115,17 @@ module JITCompiled
     return compile_proc
   end
 
+  # Create a JIT::Function that when called will compile the method.
+  #
+  # Returns the JIT::Function.
+  #
+  # This method should not normally be called by the user.
+  #
+  # +klass+:: the class or module the method is a member of
+  # +name+:: a Symbol with the _current_ name of the method (it gets
+  # aliased when the stub is installed)
+  # +method+:: a Method or UnboundMethod for the method to be compiled
+  # +orig_name+:: a Symbol with the name of the method's stub
   def self.jit_stub(klass, name, orig_name, method)
     compile_proc = self.compile_proc(klass, method, name, orig_name)
 
@@ -157,6 +204,12 @@ module JITCompiled
     end
   end
 
+  # Install a JIT stub for a method that when called will cause the
+  # method to be compiled and then called.  If compilation fails, the
+  # method is reverted to the original interpreted method.
+  #
+  # +klass+:: the class or module the method is a member of
+  # +name+:: a Symbol with the name of the method
   def self.install_jit_stub(klass, name)
     # Don't install a stub for a stub
     return if name =~ /^ludicrous__orig_tmp__/
@@ -207,6 +260,10 @@ module JITCompiled
     end
   end
 
+  # Callback when the JITCompiled module is included as a mixin.  Causes
+  # stubs to be installed for all methods currently defined and installs
+  # a hook so that all future methods will have stubs installed when
+  # they are defined.
   def self.append_features(mod)
     if mod.ludicrous_dont_compile then
       Ludicrous.logger.info("Not compiling #{mod}")
@@ -241,6 +298,10 @@ module JITCompiled
     install_method_added_jit_hook(mod)
   end
 
+  # Precompile (i.e. compile now) all instance methods in the given
+  # module.
+  #
+  # +mod+:: the module that should be precompiled
   def self.jit_precompile_all_instance_methods(mod)
     if mod.ludicrous_dont_compile then
       Ludicrous.logger.info("Not compiling #{mod}")
@@ -255,6 +316,10 @@ module JITCompiled
     end
   end
 
+  # Install stubs (i.e. compile lazily) all instance methods in the
+  # given module.
+  #
+  # +mod+:: the module that should be lazily compiled
   def self.install_jit_stubs_for_all_instance_methods(mod)
     if mod.ludicrous_dont_compile then
       Ludicrous.logger.info("Not compiling #{mod}")
@@ -269,6 +334,10 @@ module JITCompiled
     end
   end
 
+  # Install a hook so that all future methods added to the given module
+  # will have jit stubs installed.
+  #
+  # +mod+:: the module that should receive the hook
   def self.install_method_added_jit_hook(mod)
     if mod.ludicrous_dont_compile then
       Ludicrous.logger.info("Not compiling #{mod}")
