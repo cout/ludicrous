@@ -7,3 +7,4 @@ ext/mkmf.log
 ludicrous-*.gem
 *~
 .*.swp
+./doc
