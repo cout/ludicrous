@@ -1,9 +1,29 @@
+require 'ludicrous/local_variable'
+
 module Ludicrous
 
+# The base class for all scope objects.  The scope keeps track of the
+# arguments and local variables for a given function or scope.  Blocks
+# are given their own scope.  If a function has a block, it must use an
+# AddressableScope, otherwise it can use a regular Scope.
 class ScopeBase
   attr_reader :args
   attr_reader :rest_arg
 
+  # Create a new scope.
+  #
+  # ScopeBase objects should not be directly instantiated; rather, a
+  # derived instance should be created instead.
+  #
+  # +function+:: the JIT::Function currently being compiled
+  # +local_names+:: an Array of Symbol containing the names of all the
+  # local variables
+  # +locals+:: a Hash mapping the name of each local variable as a
+  # Symbol to the LocalVariable object for that variable
+  # +args+:: an Array of Symbol containing the names of all the
+  # arguments to the function
+  # +rest_arg+:: a Symbol with the name of the rest arg (the argument in
+  # the argument list preceded by the splat operator)
   def initialize(function, local_names, locals, args = [], rest_arg = nil)
     @function = function
     @self = Ludicrous::LocalVariable.new(@function, "SELF")
@@ -15,6 +35,10 @@ class ScopeBase
     @rest_arg = rest_arg
   end
 
+  # Emit code to set a local variable
+  #
+  # +vid+:: a Symbol with the name of the variable to set
+  # +value+:: a JIT::Value containing the new value of the variable
   def local_set(vid, value)
     local = @locals[vid]
     if not local then
@@ -24,6 +48,9 @@ class ScopeBase
     return value
   end
 
+  # Emit code to retrieve a local variable
+  #
+  # +vid+:: a Symbol with the name of the variable to get
   def local_get(vid)
     local = @locals[vid]
     if not local then
@@ -32,41 +59,88 @@ class ScopeBase
     return local.get()
   end
 
+  # Return true if the indicated local variable has been defined at this
+  # point, false otherwise
+  #
+  # +vid+:: a Symbol with the name of the variable to test
   def local_defined(vid)
     return @locals[vid] != nil
   end
 
+  # Get the object reference for the self variable.
+  #
+  # Returns a JIT::Value with the value of the self variable.
   def self
     return @self.get
   end
 
+  # Sets the self variable.
+  #
+  # This method should be called once at the beginning of the
+  # compilation of a function.
+  #
+  # +value+:: a JIT::Value containing the value of the variable
   def self=(value)
     @self.set(value)
   end
 
+  # Sets the value of a method argument.
+  #
+  # This method should be called once at the beginning of the
+  # compilation of a function.
+  #
+  # +vid+:: a Symbol with the name of the argument to set
+  # +value+:: a JIT::Value containing the value of the argument
   def arg_set(vid, value)
     local_set(vid, value)
     @args << vid
   end
 
+  # Sets the value of a method's rest argument.
+  #
+  # This method should be called once at the beginning of the
+  # compilation of a function.
+  #
+  # +vid+:: a Symbol with the name of the argument to set
+  # +value+:: a JIT::Value containing the value of the argument
   def rest_arg_set(vid, value)
     local_set(vid, value)
     @rest_arg = vid
   end
 
+  # Emit code to build an array containing all the arguments to the
+  # function.
+  #
+  # Returns an RArray containing the values of all the arguments to the
+  # function.
   def argv
-    argv = @function.rb_ary_new2(@args.size)
+    ary = @function.rb_ary_new2(@args.size)
+    argv = RArray.wrap(ary)
     @args.each_with_index do |vid, idx|
-      @function.rb_ary_store(argv, idx, local_get(vid))
+      argv[idx] = local_get(vid)
     end
     if @rest_arg then
-      @function.rb_ary_concat(argv, local_get(@rest_arg))
+      rest = RArray.wrap(local_get(@rest_arg))
+      argv.concat(rest)
     end
     return argv
   end
 end
 
+# A non-addressable scope whose variables can only be accessed from
+# inside the current scope.
 class Scope < ScopeBase
+  # Create a new Scope.
+  #
+  # +function+:: the JIT::Function currently being compiled
+  # +local_names+:: an Array of Symbol containing the names of all the
+  # local variables
+  # +locals+:: a Hash mapping the name of each local variable as a
+  # Symbol to the LocalVariable object for that variable
+  # +args+:: an Array of Symbol containing the names of all the
+  # arguments to the function
+  # +rest_arg+:: a Symbol with the name of the rest arg (the argument in
+  # the argument list preceded by the splat operator)
   def initialize(function, local_names, args = [], rest_arg = nil)
     locals = {}
     local_names.each do |name|
@@ -78,10 +152,24 @@ class Scope < ScopeBase
   end
 end
 
+# A addressable scope for use when the local variables need to be
+# accessed outside the current scope, e.g. when the method being
+# compiled uses an iteration block.
 class AddressableScope < ScopeBase
+  # An Array of Symbol containing the names of all the local variables
   attr_reader :local_names
+
+  # A JIT::Value referencing an Object for this scope, to be used with
+  # +rb_iterate+.
   attr_reader :scope_obj
 
+  # Return a JIT::Type for an underlying scope object with the given
+  # local variables.
+  #
+  # This function should not normally be called by the user.
+  #
+  # +local_names+:: an Array of Symbol containing the names of all the
+  # local variables in the scope.
   def self.scope_type(local_names)
     return JIT::Struct.new(
         [ :len      , JIT::Type::UINT   ],
@@ -91,23 +179,22 @@ class AddressableScope < ScopeBase
     )
   end
 
-  JIT::Context.build do |context|
-    signature = JIT::Type.create_signature(
-        JIT::ABI::CDECL,
-        JIT::Type::VOID,
-        [ JIT::Type::VOID_PTR ])
-    MARK_FUNCTION = JIT::Function.compile(context, signature) do |f|
-      scope_ptr = f.get_param(0)
-      scope_size = f.insn_load_relative(scope_ptr, 0, JIT::Type::UINT)
-      start_ptr = scope_ptr + f.const(JIT::Type::UINT, 4) # TODO: not 64-bit safe
-      end_ptr = scope_ptr + scope_size
-      f.if(start_ptr < end_ptr) {
-        f.rb_gc_mark_locations(start_ptr, end_ptr)
-      } .end
-      f.insn_return()
-    end
+  ##
+  # A JIT::Function to mark all the local variables in an addressable scope.
+  MARK_FUNCTION = JIT::Function.build([ :VOID_PTR ] => :VOID) do |f|
+    scope_ptr = f.get_param(0)
+    scope_size = f.insn_load_relative(scope_ptr, 0, JIT::Type::UINT)
+    start_ptr = scope_ptr + f.const(JIT::Type::UINT, 4) # TODO: not 64-bit safe
+    end_ptr = scope_ptr + scope_size
+    f.if(start_ptr < end_ptr) {
+      f.rb_gc_mark_locations(start_ptr, end_ptr)
+    } .end
+    f.insn_return()
   end
 
+  ##
+  # A C function to mark all the local variables in an addressable
+  # scope.
   MARK_CLOSURE = MARK_FUNCTION.to_closure
 
 
@@ -129,8 +216,20 @@ class AddressableScope < ScopeBase
   FREE_CLOSURE = FREE_FUNCTION.to_closure
 =end
 
-  # TODO: This function isn't right
+  # Create a new inner scope from an outer scope, for use with
+  # +rb_iterate+.
+  #
+  # +function+:: the inner JIT::Function being compiled
+  # +scope_obj+:: an object reference to the underlying scope object (as
+  # returned by #scope_obj in the outer scope)
+  # +local_names+:: an Array of Symbol containing the names of all the
+  # local variables
+  # +args+:: an Array of Symbol containing the names of all the
+  # arguments to the function
+  # +rest_arg+:: a Symbol with the name of the rest arg (the argument in
+  # the argument list preceded by the splat operator)
   def self.load(function, scope_obj, local_names, args, rest_arg)
+    # TODO: This function isn't right
     scope_ptr = function.data_get_struct(scope_obj)
     scope_type = self.scope_type(local_names)
     locals = {}
@@ -141,6 +240,20 @@ class AddressableScope < ScopeBase
     return self.new(function, local_names, locals, args, rest_arg, scope_ptr, scope_obj)
   end
 
+  # Create a new AddressableScope.
+  #
+  # +function+:: the JIT::Function currently being compiled
+  # +local_names+:: an Array of Symbol containing the names of all the
+  # local variables
+  # +locals+:: a Hash mapping the name of each local variable as a
+  # Symbol to the LocalVariable object for that variable
+  # +args+:: an Array of Symbol containing the names of all the
+  # arguments to the function
+  # +rest_arg+:: a Symbol with the name of the rest arg (the argument in
+  # the argument list preceded by the splat operator)
+  # +scope_ptr+:: a pointer to the underlying scope object
+  # +scope_obj+:: an object reference to the underlying scope object (as
+  # returned by #scope_obj in the outer scope)
   def initialize(function, local_names, locals=nil, args=[], rest_arg=nil, scope_ptr=nil, scope_obj=nil)
     need_init = false
 
@@ -193,8 +306,20 @@ class AddressableScope < ScopeBase
     end
   end
 
-  # TODO: a hash is easy to use, but maybe not very fast
+  # Set a dynamic variable.
+  #
+  # A dynamic variable differs from a local variable in that it exists
+  # only in an inner scope.
+  #
+  # If Ludicrous can determine the existence of a dynamic variable
+  # statically, it will preallocate a slot for it in the local variable
+  # table and access will be as fast as for local variables, otherwise
+  # it will revert to a hash lookup.
+  #
+  # +vid+:: a Symbol with the name of the variable to set
+  # +value+:: a JIT::Value containing the new value of the variable
   def dyn_set(vid, value)
+    # TODO: a hash is easy to use, but maybe not very fast
     if local_defined(vid) then
       local_set(vid, value)
     else
@@ -202,6 +327,11 @@ class AddressableScope < ScopeBase
     end
   end
 
+  # Get a dynamic variable.
+  #
+  # Set also #dyn_set.
+  #
+  # +vid+:: a Symbol with the name of the variable to get
   def dyn_get(vid)
     if local_defined(vid) then
       return local_get(vid)
@@ -211,6 +341,14 @@ class AddressableScope < ScopeBase
     end
   end
 
+  # Returns a JIT::Value containing true if the given dynamic variable
+  # has been defined, a JIT::Value containing false otherwise.
+  #
+  # This differs from local_defined(), which returns true or false (not
+  # as a JIT::Value), because the value of dyn_defined() cannot be
+  # determined statically (by the very nature of dynamic variables).
+  #
+  # +vid+:: a Symbol with the name of the variable to test
   def dyn_defined(vid)
     if local_defined(vid) then
       return @function.const(JIT::Type::OBJECT, true)

@@ -293,10 +293,8 @@ end
 class ZSUPER
   def ludicrous_compile(function, env)
     argv = env.scope.argv
-    array_ptr = function.ruby_struct_member(:RArray, :ptr, argv)
-    array_len = function.ruby_struct_member(:RArray, :len, argv)
     set_source(function)
-    return function.rb_call_super(array_len, array_ptr)
+    return function.rb_call_super(argv.len, argv.ptr)
   end
 end
 
