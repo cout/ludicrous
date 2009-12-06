@@ -357,3 +357,5 @@ module JITCompiled
   end
 end
 
+end # module Ludicrous
+

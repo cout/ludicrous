@@ -35,6 +35,7 @@ require 'ludicrous/toplevel'
 require 'ludicrous/stubs'
 require 'ludicrous/module_compiler'
 require 'ludicrous/method_compiler'
+require 'ludicrous/speed'
 
 require 'ludicrous/yarv_vm'
 
@@ -47,25 +48,3 @@ else
 require 'ludicrous/eval_nodes'
 end
 
-Speed = JITCompiled
-
-end # module Ludicrous
-
-if __FILE__ == $0 then
-
-  require 'nodepp'
-
-def foo(n=20)
-  x = (a, b = 1)
-  p a, b
-  return x
-end   
-
-m = method(:foo)
-# pp m.body
-f = m.ludicrous_compile
-puts "Compiled"
-p f.apply(self)
-# hash_access_II()
-
-end
