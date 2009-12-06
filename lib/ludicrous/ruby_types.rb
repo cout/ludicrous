@@ -1,3 +1,5 @@
+# Abstractions for the C structs used to represent ruby objects.
+
 require 'ludicrous/native_functions'
 
 module Ludicrous
