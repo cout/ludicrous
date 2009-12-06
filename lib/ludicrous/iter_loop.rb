@@ -1,3 +1,5 @@
+# Abstractions for helping to create ruby iterators at the C level.
+
 module Ludicrous
   # The JIT::Type of the argument to the iterator function
   ITER_ARG_TYPE = JIT::Struct.new(
