@@ -1,3 +1,24 @@
+# Abstractions for manipulating the stack when compiling YARV code.
+#
+# The YARV virtual machine is a stack-based virtual machine.  However,
+# libjit is a register-based vm.  This presents an interesting problem:
+#
+# 1. Compilation is most efficient if we do operations in registers
+# rather than writing to a stack physically located in memory.
+#
+# 2. In a loop, however, the stack can be dynamically manipulated in
+# such a way that the stack does not contain the same number of elements
+# before the loop started as when the loop ends.
+#
+# 3. We must therefore detect this situation and optimize our code
+# accordingly.
+#
+# The abstractions here do their best to account for these cases.  We
+# use a StaticStack whenever possible, because it is most efficient,
+# then fall back on a YarvStack if the we determine we cannot use a
+# StaticStack.
+#
+
 module Ludicrous
 
 # Base class for all Stack objects.  Adds some convenience methods,
