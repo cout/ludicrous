@@ -1,7 +1,13 @@
 require 'ludicrous/yarv_vm'
+require 'ludicrous/compile_options'
 
 class Node
 
+# Compile this node as if it were the toplevel node of a Ruby program.
+#
+# +toplevel_self+:: the toplevel self
+# +compile_options+:: a CompileOptions object indicating how this node
+# is to be compiled
 def ludicrous_compile_toplevel(
     toplevel_self,
     compile_options = Ludicrous::CompileOptions.new)
@@ -49,6 +55,12 @@ end
 if defined?(RubyVM) then
 
 class RubyVM
+  # Compile this instruction sequence as if it were the toplevel
+  # instruction sequence of a Ruby program.
+  #
+  # +toplevel_self+:: the toplevel self
+  # +compile_options+:: a CompileOptions object indicating how this node
+  # is to be compiled
   class InstructionSequence
     def ludicrous_compile_toplevel(
       toplevel_self,
@@ -100,14 +112,30 @@ end # if defined?(RubyVM)
 class String
   if defined?(RubyVM) then
     # >= 1.9
-    def ludicrous_compile_toplevel(toplevel_self = Object.new)
+
+    # Compile this node as if it were the toplevel code of a Ruby program.
+    #
+    # +toplevel_self+:: the toplevel self
+    # +compile_options+:: a CompileOptions object indicating how this node
+    # is to be compiled
+    def ludicrous_compile_toplevel(
+        toplevel_self = Object.new,
+        compile_options = Ludicrous::CompileOptions.new)
       node = Node.compile_string(self)
       iseq = node.bytecode_compile() # TODO: name/filename
       return iseq.ludicrous_compile_toplevel(toplevel_self)
     end
   else
     # <= 1.8
-    def ludicrous_compile_toplevel(toplevel_self = Object.new)
+
+    # Compile this node as if it were the toplevel code of a Ruby program.
+    #
+    # +toplevel_self+:: the toplevel self
+    # +compile_options+:: a CompileOptions object indicating how this node
+    # is to be compiled
+    def ludicrous_compile_toplevel(
+        toplevel_self = Object.new,
+        compile_options = Ludicrous::CompileOptions.new)
       node = Node.compile_string(self)
       return node.ludicrous_compile_toplevel(toplevel_self)
     end
