@@ -1,3 +1,8 @@
+# Code to compile individual YARV instructions.
+#
+# Code to compile the entire instruction sequence can be found in
+# yarv_iseq.rb.
+
 require 'ludicrous/yarv_vm'
 require 'ludicrous/yarv_environment'
 require 'ludicrous/iter_loop'

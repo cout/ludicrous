@@ -1,3 +1,8 @@
+# Code to compile the a YARV instruction sequence.
+#
+# Code to compile individual YARV instructions can be found in
+# yarv_instructions.rb.
+
 require 'ludicrous/yarv_vm'
 require 'ludicrous/yarv_environment'
 require 'internal/tag'
