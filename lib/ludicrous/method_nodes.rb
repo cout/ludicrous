@@ -1,3 +1,11 @@
+# Compilation of nodes used to represent methods and blocks.
+#
+# Code to compile nodes contained inside a method on MRI is found in
+# eval_nodes.rb.
+#
+# Code to compile instruction sequences on YARV is found in
+# yarv_iseq.rb.
+
 require 'internal/method/signature'
 require 'internal/proc/signature'
 

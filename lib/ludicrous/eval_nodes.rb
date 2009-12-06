@@ -1,3 +1,8 @@
+# Code to compile nodes contained inside a method on MRI.
+#
+# Compilation of nodes used to represent methods and blocks is done in
+# method_nodes.rb.
+
 require 'ludicrous/iter_loop'
 
 class Node
