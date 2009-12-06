@@ -77,7 +77,8 @@ class YarvEnvironment < YarvBaseEnvironment
   def branch(offset)
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_tag_jump(offset) then
+    inside = is_tag_jump(offset)
+    if inside then
       prepare_tag_jump(*inside)
     end
     @function.insn_branch(@labels[offset])
@@ -103,7 +104,8 @@ class YarvEnvironment < YarvBaseEnvironment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_tag_jump(offset) then
+    inside = is_tag_jump(offset)
+    if inside then
       @function.if(cond) {
         prepare_tag_jump(*inside)
         @function.insn_branch(@labels[offset])
@@ -117,7 +119,8 @@ class YarvEnvironment < YarvBaseEnvironment
     offset = @pc.offset + relative_offset
     @labels[offset] ||= JIT::Label.new
     @stack.validate_branch(offset)
-    if inside = is_tag_jump(offset) then
+    inside = is_tag_jump(offset)
+    if inside then
       @function.unless(cond) {
         prepare_tag_jump(*inside)
         @function.insn_branch(@labels[offset])
