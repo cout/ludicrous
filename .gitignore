@@ -5,3 +5,5 @@ ext/*.so
 ext/Makefile
 ext/mkmf.log
 ludicrous-*.gem
+*~
+.*.swp
