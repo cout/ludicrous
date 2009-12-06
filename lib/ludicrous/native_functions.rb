@@ -1,3 +1,5 @@
+# Wrappers for emitting code to call functions in the Ruby C API.
+
 require 'jit/function'
 require 'ludicrous.so'
 
