@@ -1,6 +1,6 @@
-require 'ludicrous'
-
 # Require this file to get Ludicrous to compile itself
+
+require 'ludicrous'
 
 JIT::Value.go_plaid
 JIT::Function.go_plaid
