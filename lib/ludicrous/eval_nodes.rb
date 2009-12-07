@@ -923,20 +923,18 @@ def ludicrous_iterate_fast(function, env, lhs, body, recv=nil, &block)
     inner_env = Ludicrous::Environment.new(
         f, env.options, env.cbase, inner_scope)
 
-    r = inner_env.iter { |loop|
+    result = f.value(:OBJECT, nil)
+    inner_env.iter { |loop|
       ludicrous_assign(f, inner_env, lhs, value)
 
       if body then
         body.set_source(f)
-        result = body.ludicrous_compile(f, inner_env)
-      else
-        result = f.const(JIT::Type::OBJECT, nil)
+        result.store body.ludicrous_compile(f, inner_env)
       end
-      result
     }
 
-    f.insn_return(r)
-    # puts f
+    f.insn_return(result)
+    # puts f.dump
   end
 
   iter_arg = Ludicrous::ITER_ARG_TYPE.create(function)
