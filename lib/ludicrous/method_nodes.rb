@@ -297,7 +297,7 @@ class SCOPE
   end
 
   def ludicrous_compile_optional_default(env, arg)
-    node = arg.node_or_iseq_for_default
+    node = arg.node_for_default
     return node.ludicrous_compile(env.function, env)
   end
 
