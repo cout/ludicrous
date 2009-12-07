@@ -91,7 +91,7 @@ srcs.uniq!
 $objs = srcs.map { |f| f.sub(/\.c$/, ".#{$OBJEXT}") }
 $CFLAGS << ' -Wall -g'
 
-create_makefile("ludicrous")
+create_makefile("ludicrous_ext")
 
 append_to_makefile = ''
 

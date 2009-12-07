@@ -19,8 +19,7 @@ require 'jit/value'
 require 'jit/struct'
 require 'jit/function'
 
-# TODO: This doesn't work on Mac or Win
-require 'ludicrous.so'
+require 'ludicrous_ext'
 
 require 'ludicrous/value_conversions'
 require 'ludicrous/native_functions'
