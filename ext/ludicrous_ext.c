@@ -456,7 +456,7 @@ static void add_member_info(
   rb_hash_aset(array_info, ID2SYM(rb_intern(member_name)), member_info_v);
 }
 
-void Init_ludicrous()
+void Init_ludicrous_ext()
 {
   rb_require("jit");
 
