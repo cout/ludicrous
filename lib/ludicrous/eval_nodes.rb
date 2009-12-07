@@ -817,7 +817,7 @@ class UNTIL
   def ludicrous_compile(function, env)
     cond = proc { self.cond.ludicrous_compile(function, env).rtest }
     retval = function.value(JIT::Type::OBJECT)
-    function.until(cond).do { |loop|
+    function.until(&cond).do { |loop|
       env.loop(loop) {
         if self.body then
           retval.store(self.body.ludicrous_compile(function, env))
