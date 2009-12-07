@@ -307,7 +307,7 @@ class ATTRASGN
   def ludicrous_compile(function, env)
     mid = self.mid
     if self.args then
-      args = self.args.to_a.map { |arg| arg.ludicrous_compile(function, env) }
+      args = self.args
     else
       # TODO: need get the last evaluated node, I think
       raise "Can't handle ATTRASGN without args"
@@ -320,6 +320,25 @@ class ATTRASGN
     end
 
     return ludicrous_compile_call(function, env, recv, mid, args)
+  end
+end
+
+class ARGSPUSH
+  def ludicrous_compile(function, env)
+    head = self.head.ludicrous_compile(function, env)
+    body = self.body.ludicrous_compile(function, env)
+    args = function.rb_ary_dup(head)
+    function.rb_ary_push(args, body)
+    return args
+  end
+end
+
+class ARGSCAT
+  def ludicrous_compile(function, env)
+    args = self.head.ludicrous_compile(function, env)
+    body = self.body.ludicrous_compile(function, env)
+    result = function.rb_ary_concat(args, body.splat)
+    return result
   end
 end
 
