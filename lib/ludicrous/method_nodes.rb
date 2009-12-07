@@ -315,6 +315,8 @@ class SCOPE
       if not result.is_returned then
         function.insn_return(result)
       end
+
+      # puts function.dump
     end
   end
 end
@@ -360,7 +362,7 @@ class METHOD
       origin_class,
       compile_options = Ludicrous::CompileOptions.new)
 
-    puts self.body.disasm
+    # puts self.body.disasm
 
     compiler = MethodNodeCompiler.new(
         self,
