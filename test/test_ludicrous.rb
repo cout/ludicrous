@@ -496,6 +496,9 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, result
   end
 
+=begin
+  TODO: bmethod not yet supported
+
   def test_empty_bmethod
     foo = Class.new do
       include Test::Unit::Assertions
@@ -515,7 +518,7 @@ class TestLudicrous < Test::Unit::TestCase
     result = compile_and_run(foo.new, :foo, 42)
     assert_equal 42, result
   end
-
+=end
   def test_assign_array
     foo = Class.new do
       include Test::Unit::Assertions
