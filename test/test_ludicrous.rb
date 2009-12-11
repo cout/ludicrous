@@ -481,6 +481,8 @@ class TestLudicrous < Test::Unit::TestCase
   end
 
   def test_return_from_iterator
+    return if not defined?(RubyVM)
+
     foo = Class.new do
       include Test::Unit::Assertions
       def iter
