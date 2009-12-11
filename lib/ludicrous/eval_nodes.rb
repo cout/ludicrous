@@ -1361,54 +1361,50 @@ class RESCUE
   def ludicrous_compile(function, env)
     scope_obj = env.scope.scope_obj()
 
-    body_signature = JIT::Type.create_signature(
-      JIT::ABI::CDECL,
-      JIT::Type::OBJECT,
-      [ JIT::Type::VOID_PTR ])
-    body_f = JIT::Function.compile(function.context, body_signature) do |f|
-      f.optimization_level = env.options.optimization_level
-
-      outer_scope_obj = f.get_param(0)
-      inner_scope = Ludicrous::AddressableScope.load(f, outer_scope_obj, env.scope.local_names, env.scope.args, env.scope.rest_arg)
-      inner_env = Ludicrous::Environment.from_outer(f, inner_scope, env)
-
-      result = self.head.ludicrous_compile(f, inner_env)
-      f.insn_return(result)
-    end
+    body_f = self.ludicrous_compile_rescue_body(function, env)
  
+    rescue_f = self.ludicrous_compile_rescue_resq(function, env)
+
     # TODO: will this leak memory if the function is redefined later?
-    body_c = function.const(JIT::Type::FUNCTION_PTR, body_f.to_closure)
+    body_c = function.const(:FUNCTION_PTR, body_f.to_closure)
+    rescue_c = function.const(:FUNCTION_PTR, rescue_f.to_closure)
+
     set_source(function)
-    state = function.value(JIT::Type::INT)
-    state.store(function.const(JIT::Type::INT, 0))
-    result = function.value(JIT::Type::OBJECT)
-    result.store(function.const(JIT::Type::OBJECT, nil))
+    state = function.value(:INT)
+    result = function.value(:OBJECT)
+
+    retry_label = JIT::Label.new
+    function.insn_label(retry_label)
+
+    state.store(function.const(:INT, 0))
     result.store(function.rb_protect(body_c, scope_obj, state.address))
 
-    return_label = JIT::Label.new
-    no_exception_label = JIT::Label.new
-    is_return = (state == function.const(JIT::Type::INT, 0))
-    function.insn_branch_if(is_return, return_label)
-    is_exception = (state == function.const(JIT::Type::INT, Ludicrous::TAG_RAISE))
+    function.if(state == function.const(:INT, Ludicrous::TAG_RETURN)) {
+      result.store(env.scope.dyn_get(LUDICROUS_RESCUE_RESULT_VAR_NAME))
+      env.return(result)
+    }.elsunless(state == function.const(:INT, 0)) {
+      function.if(state == function.const(:INT, Ludicrous::TAG_RAISE)) {
+        state.store(function.const(:INT, 0))
+        result.store(function.rb_protect(rescue_c, scope_obj, state.address))
+        function.if(state == function.const(:INT, Ludicrous::TAG_RETRY)) {
+          # TODO: set ruby_errinfo?
+          function.insn_branch(retry_label)
+        }.elsif(state == function.const(:INT, Ludicrous::TAG_RAISE)) {
+          # TODO: set ruby_errinfo?
+        }.elsif(state == function.const(:INT, Ludicrous::TAG_RETURN)) {
+          result.store(env.scope.dyn_get(LUDICROUS_RESCUE_RESULT_VAR_NAME))
+          env.return(result)
+        }.end
 
-    function.if(is_exception) {
-      resq = self.resq
-      ruby_errinfo = function.ruby_errinfo()
-      while resq do
-        handle_rescue = handle_rescue(function, env, resq, ruby_errinfo)
-        function.if(handle_rescue) {
-          if resq.body then
-            result.store(resq.body.ludicrous_compile(function, env))
-          end
-        } .end
-        function.insn_branch(return_label)
-        resq = resq.head
-      end
-    } .end
-
-    # TODO: need to call set_source here?
-    function.rb_jump_tag(state)
-    function.insn_label(return_label)
+        function.unless(state == function.const(:INT, 0)) {
+          # TODO: need to call set_source here?
+          function.rb_jump_tag(state)
+        }.end
+      }.elsunless(state == function.const(:INT, 0)) {
+        # TODO: need to call set_source here?
+        function.rb_jump_tag(state)
+      }.end
+    }.end
 
     if self.else then
       raise "Can't handle else clause on a RESCUE"
@@ -1417,15 +1413,80 @@ class RESCUE
     return result
   end
 
+  def ludicrous_rescue_return_proc()
+    return proc { |rf, renv, rvalue|
+      value ||= rf.const(:OBJECT, nil)
+      renv.scope.dyn_set(LUDICROUS_RESCUE_RESULT_VAR_NAME, rvalue)
+      rf.rb_jump_tag(Ludicrous::TAG_RETURN)
+    }
+  end
+
+  def ludicrous_compile_rescue_body(function, env)
+    body_f = JIT::Function.compile(function.context, [ :VOID_PTR ] => :OBJECT) do |f|
+      f.optimization_level = env.options.optimization_level
+
+      outer_scope_obj = f.get_param(0)
+      inner_scope = Ludicrous::AddressableScope.load(
+          f, outer_scope_obj, env.scope.local_names, env.scope.args, env.scope.rest_arg)
+      inner_env = Ludicrous::Environment.from_outer(f, inner_scope, env)
+
+      result = f.value(:OBJECT)
+      inner_env.catch_return(self.ludicrous_rescue_return_proc) {
+        result.store self.head.ludicrous_compile(f, inner_env)
+      }
+      f.insn_return(result)
+    end
+
+    return body_f
+  end
+
+  def ludicrous_compile_rescue_resq(function, env)
+    rescue_f = JIT::Function.compile(function.context, [ :VOID_PTR ] => :OBJECT) do |f|
+      f.optimization_level = env.options.optimization_level
+
+      outer_scope_obj = f.get_param(0)
+      inner_scope = Ludicrous::AddressableScope.load(
+          f, outer_scope_obj, env.scope.local_names, env.scope.args, env.scope.rest_arg)
+      inner_env = Ludicrous::Environment.from_outer(f, inner_scope, env)
+
+      result = f.value(:OBJECT)
+      inner_env.catch_return(self.ludicrous_rescue_return_proc) {
+        result.store self.ludicrous_compile_rescue(f, inner_env)
+      }
+      f.insn_return(result)
+    end
+
+    return rescue_f
+  end
+
+  def ludicrous_compile_rescue(function, env)
+    return_label = JIT::Label.new
+    result = function.value(:OBJECT, nil)
+    resq = self.resq
+    ruby_errinfo = function.ruby_errinfo()
+    while resq do
+      handle_rescue = handle_rescue(function, env, resq, ruby_errinfo)
+      function.if(handle_rescue) {
+        if resq.body then
+          result.store(resq.body.ludicrous_compile(function, env))
+        end
+      } .end
+      function.insn_branch(return_label)
+      resq = resq.head
+    end
+    function.insn_label(return_label)
+    return result
+  end
+
   def handle_rescue(function, env, resq, ruby_errinfo)
     if not resq.args then
-      types = [ function.const(JIT::Type::OBJECT, StandardError) ]
+      types = [ function.const(:OBJECT, StandardError) ]
     else
       types = resq.args.to_a.map { |n| n.ludicrous_compile(function, env) }
     end
 
     result = function.value(JIT::Type::UINT)
-    result.store(function.const(JIT::Type::OBJECT, false))
+    result.store(function.const(:OBJECT, false))
     resq.set_source(function)
     types.each do |type|
       result = result | function.rb_funcall(type, :===, ruby_errinfo)
@@ -1434,17 +1495,11 @@ class RESCUE
   end
 end
 
-=begin
-TODO: we can't blindly use rb_jump_tag here, because our rescue clause
-isn't inside an rb_protect.  That's easy enough to fix, but retry also
-works inside a loop, in which case we may need to jump to the beginning
-of the loop if the loop is inlined.
 class RETRY
   def ludicrous_compile(function, env)
     function.rb_jump_tag(function.const(JIT::Type::INT, Ludicrous::TAG_RETRY))
   end
 end
-=end
 
 =begin
 TODO: break should be a local jump to the end of the loop (but we can't

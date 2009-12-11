@@ -27,6 +27,7 @@ class Environment
     @scope = scope
     @scope_stack = []
     @loop_end_labels = []
+    @return_procs = []
     @loops = []
     @file = nil
     @line = nil
@@ -75,9 +76,20 @@ class Environment
     end
   end
 
+  def catch_return(return_proc, &block)
+    @return_procs.push(return_proc)
+    begin
+      yield
+    ensure
+      @return_procs.pop
+    end
+  end
+
   # Emit code to return from the function currently being compiled.
   def return(value)
-    if @iter then
+    if @return_procs.size > 0 then
+      @return_procs.last.call(@function, self, value)
+    elsif @iter
       raise "Can't return from inside an iterator"
     else
       @function.insn_return(value)

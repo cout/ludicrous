@@ -29,6 +29,14 @@ class DVAR
   include DynamicVariableScopeInfo
 end
 
+class RESCUE
+  LUDICROUS_RESCUE_RESULT_VAR_NAME = :"*rescue_result*"
+
+  def ludicrous_scope_info
+    return true, [ LUDICROUS_RESCUE_RESULT_VAR_NAME ]
+  end
+end
+
 module DefinitionScopeInfo
   def ludicrous_scope_info
     # TODO

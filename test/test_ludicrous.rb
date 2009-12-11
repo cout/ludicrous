@@ -324,6 +324,36 @@ class TestLudicrous < Test::Unit::TestCase
     compile_and_run(foo.new, :foo)
   end
 
+  def test_return_inside_begin
+    foo = Class.new do
+      def foo
+        retried = false
+        begin
+          return 42
+        rescue
+        end
+        raise "Should not reach this point"
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal(42, result)
+  end
+
+  def test_return_inside_rescue
+    foo = Class.new do
+      def foo
+        retried = false
+        begin
+          raise "FOO"
+        rescue
+          return 42
+        end
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal(42, result)
+  end
+
 =begin
   This doesn't work on YARV (syntax error), and retry is unimplemented
   on 1.8.
