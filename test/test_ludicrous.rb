@@ -302,17 +302,14 @@ class TestLudicrous < Test::Unit::TestCase
       def foo
         retried = false
         begin
-          puts "in block, retried=#{retried}"
           if not retried then
             raise "FOO"
           else
             return
           end
         rescue
-          puts "in rescue, retried=#{retried}"
           if not retried then
             retried = true
-            puts "in rescue, setting retried=#{retried}"
             retry
           else
             assert false, "Retried more than once"
