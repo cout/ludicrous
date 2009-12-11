@@ -1003,7 +1003,8 @@ def has_match_data
   return false
 end
 
-# The slowest way to iterate, but matches ruby's behavior 100%
+# The slowest way to iterate, but matches ruby's behavior for arguments
+# exactly.
 def ludicrous_iter_splat_proc(function, env, lhs, body)
   scope_obj = env.scope.scope_obj
 
