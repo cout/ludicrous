@@ -140,26 +140,23 @@ class MethodNodeCompiler
     arguments_compiler = create_arguments_compiler()
     signature = arguments_compiler.jit_signature
 
-    function = nil
-    JIT::Context.build do |context|
-      function = JIT::Function.compile(context, signature) do |f|
-        f.optimization_level = @compile_options.optimization_level
+    function = JIT::Function.build(context, signature) do |f|
+      f.optimization_level = @compile_options.optimization_level
 
-        env = create_environment(f)
+      env = create_environment(f)
 
-        begin
-          arguments_compiler.compile_assign_arguments(env)
+      begin
+        arguments_compiler.compile_assign_arguments(env)
 
-          yield(f, env)
-        rescue Exception
-          if env.file and env.line then
-            $!.message << " at #{env.file}:#{env.line}"
-          end
-          raise
+        yield(f, env)
+      rescue Exception
+        if env.file and env.line then
+          $!.message << " at #{env.file}:#{env.line}"
         end
-
-        # puts f.dump
+        raise
       end
+
+      # puts f.dump
     end
 
     # TODO: We return from here instead of inside the build() call in
