@@ -696,6 +696,19 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal(1, $test_call_jit_stub_in_base_class__derived_foo_called)
   end
 
+  def test_match_data_in_proc
+    c = Class.new do
+      def foo
+        return "foo".sub(/(foo)/) { $1 + "bar" }
+      end
+
+      go_plaid
+    end
+
+    o = c.new
+    assert_equal "foobar", o.foo
+  end
+
   def test_match_data_is_local_to_method
     c = Class.new do
       include Test::Unit::Assertions

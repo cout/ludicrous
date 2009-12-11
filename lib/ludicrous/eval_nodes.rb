@@ -993,9 +993,23 @@ def ludicrous_iter_proc(function, env, lhs, body)
   return function.rb_proc_new(body_c, scope_obj)
 end
 
+def has_match_data
+  self.members.each do |name|
+    member = self[name]
+    if Node === member then
+      return true if member.has_match_data
+    end
+  end
+  return false
+end
+
 # The slowest way to iterate, but matches ruby's behavior 100%
 def ludicrous_iter_splat_proc(function, env, lhs, body)
   scope_obj = env.scope.scope_obj
+
+  if body.has_match_data then
+    raise "Cannot compile splat style iteration (iteration with arguments) with match data in the body"
+  end
 
   body_signature = JIT::Type::create_signature(
     JIT::ABI::CDECL,
@@ -1768,20 +1782,24 @@ class ARGSCAT
 end
 
 class NTH_REF
-  def ludicrous_compile(function, env)
-    # cnt = function.const(JIT::Type::INT, self.cnt)
-    # p_match_data = function.rb_svar(cnt)
-    # match_data = function.insn_load_relative(p_match_data, 0, JIT::Type::OBJECT)
-    # nth = function.const(JIT::Type::INT, self.nth)
-    # return function.rb_reg_nth_match(nth, match_data)
+  def has_match_data
+    true
+  end
 
-    # TODO: We can't supported $1..$9 inside a block, so for now it's
-    # disabled altogether
-    raise "$#{self.cnt} not supported"
+  def ludicrous_compile(function, env)
+    cnt = function.const(JIT::Type::INT, self.cnt)
+    p_match_data = function.rb_svar(cnt)
+    match_data = function.insn_load_relative(p_match_data, 0, JIT::Type::OBJECT)
+    nth = function.const(JIT::Type::INT, self.nth)
+    return function.rb_reg_nth_match(nth, match_data)
   end
 end
 
 class MATCH
+  def has_match_data
+    true
+  end
+
   def ludicrous_compile(function, env)
     lit = function.const(JIT::Type::OBJECT, self.lit)
     return function.rb_reg_match2(lit)
@@ -1789,6 +1807,10 @@ class MATCH
 end
 
 class MATCH2
+  def has_match_data
+    true
+  end
+
   def ludicrous_compile(function, env)
     recv = self.recv.ludicrous_compile(function, env)
     value = self.value.ludicrous_compile(function, env)
@@ -1797,6 +1819,10 @@ class MATCH2
 end
 
 class MATCH3
+  def has_match_data
+    true
+  end
+
   def ludicrous_compile(function, env)
     recv = self.recv.ludicrous_compile(function, env)
     value = self.value.ludicrous_compile(function, env)
