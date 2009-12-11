@@ -78,6 +78,9 @@ method calls if they are redefined (like YARV does now).
 
 Ludicrous does not currently promote integers to bignums.
 
+Match data (e.g. $~, $1..$9) modified in a jit-compiled function affects
+match data in the callee.
+
 == Platforms
 
 Ludicrous has been developed and tested on Ubuntu Linux on a Pentium 3 with
