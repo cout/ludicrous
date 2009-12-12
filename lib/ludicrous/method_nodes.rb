@@ -140,7 +140,7 @@ class MethodNodeCompiler
     arguments_compiler = create_arguments_compiler()
     signature = arguments_compiler.jit_signature
 
-    function = JIT::Function.build(context, signature) do |f|
+    function = JIT::Function.build(signature) do |f|
       f.optimization_level = @compile_options.optimization_level
 
       env = create_environment(f)
