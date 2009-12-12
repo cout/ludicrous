@@ -205,13 +205,8 @@ class AddressableScope < ScopeBase
   # scope.
   MARK_CLOSURE = MARK_FUNCTION.to_closure
 
-
-  JIT::Context.build do |context|
-    signature = JIT::Type.create_signature(
-        JIT::ABI::CDECL,
-        JIT::Type::VOID,
-        [ JIT::Type::VOID_PTR ])
-    FREE_FUNCTION = JIT::Function.compile(context, signature) do |f|
+  def self.free_function
+    return JIT::Function.build(context, [ :VOID_PTR ] => :VOID) do |f|
       ptr = f.get_param(0)
       # f.debug_print_msg("Freeing scope")
       # f.debug_print_uint(ptr)
@@ -220,7 +215,9 @@ class AddressableScope < ScopeBase
     end
   end
 
-  FREE_CLOSURE = FREE_FUNCTION.to_closure
+  # FREE_FUNCTION = free_function()
+  # FREE_CLOSURE = FREE_FUNCTION.to_closure
+  FREE_CLOSURE = Ludicrous.function_pointer_of(:ruby_xfree),
 
   # Create a new inner scope from an outer scope, for use with
   # +rb_iterate+.
