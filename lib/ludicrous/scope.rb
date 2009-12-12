@@ -1,4 +1,5 @@
 require 'ludicrous/local_variable'
+require 'ludicrous/debug_output'
 
 module Ludicrous
 
@@ -179,18 +180,25 @@ class AddressableScope < ScopeBase
     )
   end
 
+  # Create a JIT::Function to mark all the local variables in an addressable scope.
+  #
+  # Returns the new function
+  def self.mark_function
+    return JIT::Function.build([ :VOID_PTR ] => :VOID) do |f|
+      scope_ptr = f.get_param(0)
+      scope_size = f.insn_load_relative(scope_ptr, 0, JIT::Type::UINT)
+      start_ptr = scope_ptr + f.const(JIT::Type::UINT, 4) # TODO: not 64-bit safe
+      end_ptr = scope_ptr + scope_size
+      f.if(start_ptr < end_ptr) {
+        f.rb_gc_mark_locations(start_ptr, end_ptr)
+      } .end
+      f.insn_return()
+    end
+  end
+
   ##
   # A JIT::Function to mark all the local variables in an addressable scope.
-  MARK_FUNCTION = JIT::Function.build([ :VOID_PTR ] => :VOID) do |f|
-    scope_ptr = f.get_param(0)
-    scope_size = f.insn_load_relative(scope_ptr, 0, JIT::Type::UINT)
-    start_ptr = scope_ptr + f.const(JIT::Type::UINT, 4) # TODO: not 64-bit safe
-    end_ptr = scope_ptr + scope_size
-    f.if(start_ptr < end_ptr) {
-      f.rb_gc_mark_locations(start_ptr, end_ptr)
-    } .end
-    f.insn_return()
-  end
+  MARK_FUNCTION = mark_function()
 
   ##
   # A C function to mark all the local variables in an addressable
@@ -198,7 +206,6 @@ class AddressableScope < ScopeBase
   MARK_CLOSURE = MARK_FUNCTION.to_closure
 
 
-=begin
   JIT::Context.build do |context|
     signature = JIT::Type.create_signature(
         JIT::ABI::CDECL,
@@ -214,7 +221,6 @@ class AddressableScope < ScopeBase
   end
 
   FREE_CLOSURE = FREE_FUNCTION.to_closure
-=end
 
   # Create a new inner scope from an outer scope, for use with
   # +rb_iterate+.
@@ -255,6 +261,10 @@ class AddressableScope < ScopeBase
   # +scope_obj+:: an object reference to the underlying scope object (as
   # returned by #scope_obj in the outer scope)
   def initialize(function, local_names, locals=nil, args=[], rest_arg=nil, scope_ptr=nil, scope_obj=nil)
+    # TODO: this is really two separate methods:
+    # 1) if we are wrapping a scope
+    # 2) if we are creating a new scope
+
     if locals then
       need_init = false
     else
@@ -279,6 +289,7 @@ class AddressableScope < ScopeBase
 
     init_locals(scope_type, need_init)
     @scope_obj = scope_obj || wrap_scope(scope_size)
+    @scope_obj.volatile = true
   end
 
   def create_locals(function, local_names)
