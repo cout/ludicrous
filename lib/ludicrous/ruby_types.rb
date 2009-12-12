@@ -72,10 +72,6 @@ module Ludicrous
       else
         # 1.9
         len = function.value(:INT)
-        function.debug_printf("flags="); function.debug_print_uint(flags)
-        function.debug_printf("RARRAY_EMBED_FLAG="); function.debug_print_uint(RARRAY_EMBED_FLAG)
-        function.debug_printf("RARRAY_EMBED_LEN_SHIFT="); function.debug_print_uint(RARRAY_EMBED_LEN_SHIFT)
-        function.debug_printf("RARRAY_EMBED_LEN_MASK="); function.debug_print_uint(RARRAY_EMBED_LEN_MASK)
         function.if(self.flags & Ludicrous::RARRAY_EMBED_FLAG) {
           len.store(
               (flags >> Ludicrous::RARRAY_EMBED_LEN_SHIFT) &
