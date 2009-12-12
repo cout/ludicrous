@@ -255,14 +255,12 @@ class AddressableScope < ScopeBase
   # +scope_obj+:: an object reference to the underlying scope object (as
   # returned by #scope_obj in the outer scope)
   def initialize(function, local_names, locals=nil, args=[], rest_arg=nil, scope_ptr=nil, scope_obj=nil)
-    need_init = false
-
-    if not locals then
-      locals = {}
+    if locals then
+      need_init = false
+    else
+      # TODO: Odd: to call a method before initializing the base class
+      locals = create_locals(function, local_names)
       need_init = true
-      local_names.each do |name|
-        locals[name] = Ludicrous::LocalVariable.new(function, name)
-      end
     end
 
     super(function, local_names, locals, args, rest_arg)
@@ -270,11 +268,7 @@ class AddressableScope < ScopeBase
     scope_type = self.class.scope_type(local_names)
     scope_size = function.const(JIT::Type::UINT, scope_type.size)
 
-    if not scope_ptr then
-      scope_ptr = @function.ruby_xcalloc(1, scope_size)
-    end
-
-    @scope_ptr = scope_ptr
+    @scope_ptr = scope_ptr || @function.ruby_xcalloc(1, scope_size)
 
     @dynavars = Ludicrous::LocalVariable.new(@function, "DYNAVARS")
     @scope_size = Ludicrous::LocalVariable.new(@function, "SCOPE_SIZE")
@@ -283,27 +277,39 @@ class AddressableScope < ScopeBase
     @dynavars.set_addressable(@scope_ptr, scope_type.get_offset(1))
     @self.set_addressable(@scope_ptr, scope_type.get_offset(2))
 
+    init_locals(scope_type, need_init)
+    @scope_obj = scope_obj || wrap_scope(scope_size)
+  end
+
+  def create_locals(function, local_names)
+    locals = {}
+    local_names.each do |name|
+      locals[name] = Ludicrous::LocalVariable.new(function, name)
+    end
+    return locals
+  end
+
+  def init_locals(scope_type, need_init)
     @local_names.each_with_index do |name, idx|
       offset = scope_type.offset_of(name)
       @locals[name].set_addressable(@scope_ptr, offset) if @locals[name]
       @locals[name].init if need_init
     end
+  end
 
-    if scope_obj then
-      @scope_obj = scope_obj
-    else
-      @scope_obj = @function.data_wrap_struct(
-          Ludicrous::Scope,
-          MARK_CLOSURE,
-          Ludicrous.function_pointer_of(:ruby_xfree),
-          @scope_ptr)
-      @scope_size.set(scope_size)
+  def wrap_scope(scope_size)
+    scope_obj = @function.data_wrap_struct(
+        Ludicrous::Scope,
+        MARK_CLOSURE,
+        Ludicrous.function_pointer_of(:ruby_xfree),
+        @scope_ptr)
+    @scope_size.set(scope_size)
 
-      # Creating the dynavars hash MUST happen last, otherwise the GC
-      # might get invoked before the scope is setup
-      @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
-      @dynavars.set(@function.rb_hash_new())
-    end
+    # Creating the dynavars hash MUST happen last, otherwise the GC
+    # might get invoked before the scope is setup
+    @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
+    @dynavars.set(@function.rb_hash_new())
+    return scope_obj
   end
 
   # Set a dynamic variable.
