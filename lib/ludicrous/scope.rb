@@ -1,5 +1,4 @@
 require 'ludicrous/local_variable'
-require 'ludicrous/debug_output'
 
 module Ludicrous
 
@@ -206,10 +205,8 @@ class AddressableScope < ScopeBase
   MARK_CLOSURE = MARK_FUNCTION.to_closure
 
   def self.free_function
-    return JIT::Function.build(context, [ :VOID_PTR ] => :VOID) do |f|
+    return JIT::Function.build([ :VOID_PTR ] => :VOID) do |f|
       ptr = f.get_param(0)
-      # f.debug_print_msg("Freeing scope")
-      # f.debug_print_uint(ptr)
       f.ruby_xfree(ptr)
       f.insn_return()
     end
@@ -261,6 +258,8 @@ class AddressableScope < ScopeBase
     # TODO: this is really two separate methods:
     # 1) if we are wrapping a scope
     # 2) if we are creating a new scope
+    #
+    # This duality makes this code VERY brittle.  BE CAREFUL!
 
     if locals then
       need_init = false
@@ -277,6 +276,7 @@ class AddressableScope < ScopeBase
 
     @scope_ptr = scope_ptr || @function.ruby_xcalloc(1, scope_size)
 
+    # TODO: scope_size is NOT a normal object!
     @dynavars = Ludicrous::LocalVariable.new(@function, "DYNAVARS")
     @scope_size = Ludicrous::LocalVariable.new(@function, "SCOPE_SIZE")
 
@@ -286,7 +286,11 @@ class AddressableScope < ScopeBase
 
     init_locals(scope_type, need_init)
     @scope_obj = scope_obj || wrap_scope(scope_size)
-    @scope_obj.volatile = true
+
+    # Creating the dynavars hash MUST happen last, otherwise the GC
+    # might get invoked before the scope is setup
+    @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
+    @dynavars.set(@function.rb_hash_new())
   end
 
   def create_locals(function, local_names)
@@ -312,11 +316,6 @@ class AddressableScope < ScopeBase
         Ludicrous.function_pointer_of(:ruby_xfree),
         @scope_ptr)
     @scope_size.set(scope_size)
-
-    # Creating the dynavars hash MUST happen last, otherwise the GC
-    # might get invoked before the scope is setup
-    @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
-    @dynavars.set(@function.rb_hash_new())
     return scope_obj
   end
 
