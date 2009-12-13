@@ -133,11 +133,11 @@ class RubyVM
     def ludicrous_compile_next_instruction(function, env, instruction)
       env.make_label
       # env.stack.sync_sp
-      msg = "#{'%04d' % env.pc.offset} " +
-            "#{'%x' % self.object_id} " +
-            "#{instruction.inspect}"
+      # msg = "#{'%04d' % env.pc.offset} " +
+      #       "#{'%x' % self.object_id} " +
+      #       "#{instruction.inspect}"
       # puts msg
-      function.debug_print_msg(msg)
+      # function.debug_print_msg(msg)
       # function.debug_inspect_object instruction
       env.pc.advance(instruction.length)
       instruction.ludicrous_compile(function, env)
