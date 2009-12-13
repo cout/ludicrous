@@ -810,6 +810,16 @@ class Function
         [ JIT::Type::VOID_PTR ])
     return insn_call_native(:_setjmp, fptr, signature, 0, jmp_buf)
   end
+
+  define_native_function(
+      :raise,
+      JIT::Type::OBJECT,
+      [ :signal ],
+      [ JIT::Type::INT ])
+
+  def break
+    raise(19) # SIGSTOP
+  end
 end # Function
 
 end # JIT

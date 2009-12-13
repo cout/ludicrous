@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include <jit/jit.h>
 #include <ruby.h>
 
@@ -606,6 +608,7 @@ void Init_ludicrous_ext()
   DEFINE_FUNCTION_POINTER(wrap_node);
   DEFINE_FUNCTION_POINTER(unwrap_node);
   DEFINE_FUNCTION_POINTER(eval_ruby_node);
+  DEFINE_FUNCTION_POINTER(raise);
 
   struct_name_to_member_name_info = rb_hash_new();
   rb_gc_register_address(&struct_name_to_member_name_info);
