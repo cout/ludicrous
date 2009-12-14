@@ -582,13 +582,16 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, f.apply()
   end
 
+  class FakeToplevelObject
+  end
+
   def test_toplevel_defn
     program = <<-END
       def foo
         42
       end
     END
-    toplevel_self = Object.new
+    toplevel_self = FakeToplevelObject.new
     f = program.ludicrous_compile_toplevel(toplevel_self)
     assert_equal nil, f.apply()
     assert_equal 42, toplevel_self.foo
