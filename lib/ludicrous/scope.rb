@@ -260,6 +260,9 @@ class AddressableScope < ScopeBase
     # 2) if we are creating a new scope
     #
     # This duality makes this code VERY brittle.  BE CAREFUL!
+    #
+    # (in particular, adding debug print statements in this function
+    # tends to cause crashes)
 
     if locals then
       need_init = false
@@ -289,7 +292,6 @@ class AddressableScope < ScopeBase
 
     # Creating the dynavars hash MUST happen last, otherwise the GC
     # might get invoked before the scope is setup
-    @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
     @dynavars.set(@function.rb_hash_new())
   end
 
@@ -316,6 +318,7 @@ class AddressableScope < ScopeBase
         Ludicrous.function_pointer_of(:ruby_xfree),
         @scope_ptr)
     @scope_size.set(scope_size)
+    @self.set(@function.const(JIT::Type::OBJECT, nil)) # TODO: might not be necessary
     return scope_obj
   end
 
