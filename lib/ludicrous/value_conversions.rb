@@ -158,6 +158,27 @@ class Value
     return result
   end
 
+  # "Splats" the value using new semantics introduced in ruby 1.9.1.
+  #
+  # A splat operation is as follows:
+  # * Array -> self
+  # * NilClass -> nil.to_a -> []
+  # * Object -> self.to_a
+  #
+  # Returns a JIT::Value containing the splatted value.
+  def splat191
+    result = self.function.value(JIT::Type::OBJECT)
+
+    self.function.if(self.is_type(Ludicrous::T_ARRAY)) {
+      result.store(self)
+    } .else {
+      # TODO: Don't call to_a if the method is in the base class,
+      # otherwise we'll get a warning
+      result.store(self.function.rb_funcall(self, :to_a))
+    } .end
+    return result
+  end
+
   # "Splats" the avalue.
   #
   # An avalue_splat operation is as follows:

@@ -230,7 +230,18 @@ class RubyVM
       def ludicrous_compile(function, env)
         ary = env.stack.pop
         env.stack.sync_sp()
-        env.stack.push(ary.splat)
+
+        if splatarray_test(nil) == [nil] then
+          result = ary.splat
+        else
+          result = ary.splat191
+        end
+
+        env.stack.push(result)
+      end
+
+      def splatarray_test(arg)
+        return *arg
       end
     end
 

@@ -414,14 +414,10 @@ class TestLudicrous < Test::Unit::TestCase
   end
 
   def test_return_splat_nil
-    foo = Class.new do
-      include Test::Unit::Assertions
-      def foo
-        return *nil
-      end
-    end
+    foo = Class.new { def foo; return *nil; end }
+    bar = Class.new { def foo; return *nil; end }
     result = compile_and_run(foo.new, :foo)
-    assert_equal(nil, result)
+    assert_equal(bar.new.foo, result) # different behavior on 1.8 and 1.9
   end
 
   def test_splat_asgn_nil
