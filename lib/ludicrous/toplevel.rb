@@ -15,7 +15,7 @@ def ludicrous_compile_toplevel(
     toplevel_self,
     compile_options = Ludicrous::CompileOptions.new)
 
-  function = JIT::Function.build(context, [ ] => :OBJECT) do |f|
+  function = JIT::Function.build([ ] => :OBJECT) do |f|
     f.optimization_level = compile_options.optimization_level
 
     needs_addressable_scope, vars = self.ludicrous_scope_info
@@ -62,42 +62,35 @@ class RubyVM
       toplevel_self,
       compile_options = Ludicrous::CompileOptions.new)
 
-      signature = JIT::Type.create_signature(
-        JIT::ABI::CDECL,
-        JIT::Type::OBJECT,
-        [ ])
+      function = JIT::Function.build([ ] => :OBJECT) do |f|
+        f.optimization_level = compile_options.optimization_level
 
-      JIT::Context.build do |context|
-        function = JIT::Function.compile(context, signature) do |f|
-          f.optimization_level = compile_options.optimization_level
+        needs_addressable_scope = true # TODO
+        vars = self.local_table
+        vars.uniq!
+        scope_type = needs_addressable_scope \
+          ? Ludicrous::AddressableScope \
+          : Ludicrous::Scope
+        scope = scope_type.new(f, vars)
 
-          needs_addressable_scope = true # TODO
-          vars = self.local_table
-          vars.uniq!
-          scope_type = needs_addressable_scope \
-            ? Ludicrous::AddressableScope \
-            : Ludicrous::Scope
-          scope = scope_type.new(f, vars)
+        origin_class = f.const(:OBJECT, toplevel_self.class) # TODO: is this right?
 
-          origin_class = f.const(JIT::Type::OBJECT, toplevel_self.class) # TODO: is this right?
+        env = Ludicrous::YarvEnvironment.new(
+            f,
+            compile_options,
+            origin_class,
+            scope,
+            self)
 
-          env = Ludicrous::YarvEnvironment.new(
-              f,
-              compile_options,
-              origin_class,
-              scope,
-              self)
+        env.scope.self = f.const(:OBJECT, toplevel_self)
 
-          env.scope.self = f.const(JIT::Type::OBJECT, toplevel_self)
+        # puts self.disasm
 
-          # puts self.disasm
-
-          # LEAVE instruction should generate return instruction
-          self.ludicrous_compile(f, env)
-        end
-
-        return function
+        # LEAVE instruction should generate return instruction
+        self.ludicrous_compile(f, env)
       end
+
+      return function
 
     end # def ludicrous_compile_toplevel
   end # class InstructionSequence
