@@ -413,11 +413,14 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal([], rest)
   end
 
+  def splat_nil
+    return *nil
+  end
+
   def test_return_splat_nil
     foo = Class.new { def foo; return *nil; end }
-    bar = Class.new { def foo; return *nil; end }
     result = compile_and_run(foo.new, :foo)
-    assert_equal(bar.new.foo, result) # different behavior on 1.8 and 1.9
+    assert_equal(splat_nil, result) # different behavior on 1.8 and 1.9
   end
 
   def test_splat_asgn_nil
@@ -443,7 +446,7 @@ class TestLudicrous < Test::Unit::TestCase
       end
     end
     result = compile_and_run(foo.new, :foo)
-    assert_equal([nil], result)
+    assert_equal(splat_nil, result)
   end
 
   # TODO: not a very good test, we're really just making sure that we
