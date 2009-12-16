@@ -4,6 +4,30 @@
 require 'ludicrous/yarv_vm'
 require 'ludicrous/compile_options'
 
+module Ludicrous
+  class ToplevelProgram
+    def initialize(function, toplevel_self)
+      @function = function
+      @toplevel_self = toplevel_self
+    end
+
+    def self.compile(
+        entity,
+        toplevel_self,
+        compile_options = Ludicrous::CompileOptions.new)
+      function = entity.ludicrous_compile_toplevel(toplevel_self, compile_options)
+      return self.new(function, toplevel_self)
+    end
+
+    def run
+      function = @function
+      @toplevel_self.instance_eval { function.apply }
+    end
+
+    alias_method :call, :run
+  end
+end
+
 class Node
 
 # Compile this node as if it were the toplevel node of a Ruby program.
