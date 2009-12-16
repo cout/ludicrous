@@ -768,7 +768,9 @@ if __FILE__ == $0 then
   
   if defined?(MiniTest) then
     begin
-      exit MiniTest::Unit.new.run(ARGV)
+      result = MiniTest::Unit.new.run(ARGV)
+      raise "No tests run" if not result
+      exit result
     ensure
       disable_mini_unit_auto_run
     end
