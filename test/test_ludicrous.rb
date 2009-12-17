@@ -10,12 +10,31 @@ class TestLudicrous < Test::Unit::TestCase
 
   def test_return
     foo = Class.new do
-      include Test::Unit::Assertions
       def foo
         return 42
       end
     end
     assert_equal 42, compile_and_run(foo.new, :foo)
+  end
+
+  def test_return_stub
+    foo = Class.new do
+      include Ludicrous::Speed
+      def foo
+        return 42
+      end
+    end
+    f = foo.new
+    assert_equal 42, f.foo
+
+    m = f.method(:foo)
+    if Node::Method === m.body
+      # YARV
+      assert_equal Node::CFUNC, m.body.body.class
+    else
+      # MRI
+      assert_equal Node::CFUNC, m.body.class
+    end
   end
 
   def test_call_method_one_arg
