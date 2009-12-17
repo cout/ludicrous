@@ -142,47 +142,45 @@ module JITCompiled
         args = f.rb_ary_new4(argc, argv)
 
         # ... and the passed block for later.
-        passed_block = f.value(JIT::Type::OBJECT)
+        passed_block = f.value(:OBJECT)
         f.if(f.rb_block_given_p()) {
           passed_block.store f.rb_block_proc()
         }.else {
-          passed_block.store f.const(JIT::Type::OBJECT, nil)
+          passed_block.store f.const(:OBJECT, nil)
         }.end
 
-        unbound_method = f.value(JIT::Type::OBJECT)
+        unbound_method = f.value(:OBJECT)
 
         # Check to see if this is a module function
-        f.if(f.rb_obj_is_kind_of(recv, f.const(JIT::Type::OBJECT, klass))) {
+        f.if(f.rb_obj_is_kind_of(recv, klass)) {
           # If it wasn't, go ahead and compile it
-          p = f.const(JIT::Type::OBJECT, compile_proc)
-
-          f.if(f.rb_funcall(p, :call)) {
+          f.if(f.rb_funcall(compile_proc, :call)) {
             # If compilation was successful, then we'll call the
             # compiled method
             unbound_method.store f.rb_funcall(
-                f.const(JIT::Type::OBJECT, klass),
+                klass,
                 :instance_method,
-                f.const(JIT::Type::OBJECT, name))
+                name)
           }.else {
             # Otherwise we'll call the uncompiled method
-            unbound_method.store f.const(JIT::Type::OBJECT, method)
+            unbound_method.store f.const(:OBJECT, method)
           }.end
         }.else {
+          sc = f.rb_singleton_class(recv)
+
           # This is a module function, so fix the module to not have the
           # stub (TODO: perhaps we should just compile the method?)
-          mid = f.const(JIT::Type::ID, name.intern)
-          sc = f.rb_singleton_class(recv)
           f.rb_add_method(
               sc,
-              f.const(JIT::Type::ID, name.intern),
-              f.unwrap_node(f.const(JIT::Type::OBJECT, method.body)),
-              f.const(JIT::Type::INT, Noex::PUBLIC))
+              name.intern,
+              f.unwrap_node(method.body),
+              Noex::PUBLIC)
 
           # And prepare to call the uncompiled method
           unbound_method.store f.rb_funcall(
               sc,
               :instance_method,
-              f.const(JIT::Type::OBJECT, name))
+              name)
         }.end
 
         # Bind the method we want to call to the receiver
@@ -194,7 +192,7 @@ module JITCompiled
         # And call the receiver, passing the given block
         f.insn_return f.block_pass_fcall(
             bound_method,
-            f.const(JIT::Type::ID, :call),
+            :call,
             args,
             passed_block)
 
