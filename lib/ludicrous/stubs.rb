@@ -62,6 +62,11 @@ module JITCompiled
         success = proc { },
         failure = proc { })
 
+    if klass.ludicrous_dont_compile_method(name) then
+      Ludicrous.logger.info("Not compiling #{klass}##{name}")
+      return
+    end
+
     successful = false
     f = nil
 
@@ -216,8 +221,8 @@ module JITCompiled
 
     return if klass.const_defined?("HAVE_LUDICROUS_JIT_STUB__#{name.intern.object_id}")
 
-    if klass.ludicrous_dont_compile then
-      Ludicrous.logger.info("Not compiling #{klass}")
+    if klass.ludicrous_dont_compile_method(name) then
+      Ludicrous.logger.info("Not compiling #{klass}##{name}")
       return
     end
 

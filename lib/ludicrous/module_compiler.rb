@@ -56,9 +56,35 @@ class Module
 
   # Returns true if this module should not be compiled, false otherwise.
   def ludicrous_dont_compile
-    return (self.const_defined?(:LUDICROUS_DONT_COMPILE) or
-       (self.const_defined?(:LUDICROUS_OPTIONS) and
-       self::LUDICROUS_OPTIONS.dont_compile))
+    if self.const_defined?(:LUDICROUS_DONT_COMPILE) then
+      return false
+    end
+
+    if self.const_defined?(:LUDICROUS_OPTIONS) then
+      return self::LUDICROUS_OPTIONS.dont_compile)
+    end
+
+    return false
+  end
+
+  # Returns true if the given method in this module should not be
+  # compiled, false otherwise.
+  #
+  # +method+:: the name of the method to check (Symbol)
+  def ludicrous_dont_compile_method(method)
+    if ludicrous_dont_compile() then
+      return true
+    end
+
+    if self.const_defined?(:LUDICROUS_DONT_COMPILE_METHODS) then
+      return self::LUDICROUS_DONT_COMPILE_METHODS.include?(method)
+    end
+
+    if self.const_defined?(:LUDICROUS_OPTIONS) then
+      return self::LUDICROUS_OPTIONS.exclude_methods.include?(method)
+    end
+
+    return false
   end
 end
 

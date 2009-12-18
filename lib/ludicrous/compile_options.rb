@@ -4,7 +4,8 @@ CompileOptionsMembers = Struct.new(
     :optimization_level,
     :precompile,
     :iterate_style,
-    :dont_compile)
+    :dont_compile,
+    :exclude_methods)
 
 # Specifies the parameters used to compile a function or class
 class CompileOptions < CompileOptionsMembers
@@ -22,6 +23,8 @@ class CompileOptions < CompileOptionsMembers
   # YARV.
   # * dont_compile (true/false) - indicates that this class or method
   # should not be compiled.
+  # * exclude_methods (Set or Array of Symbol) - a list of methods that should
+  # not be compiled
   #
   # == Iteration methods
   #
@@ -55,6 +58,7 @@ class CompileOptions < CompileOptionsMembers
     self.optimization_level = 2
     self.iterate_style = nil
     self.dont_compile = false
+    self.exclude_methods = []
 
     h.each do |k, v|
       self[k] = v
