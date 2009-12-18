@@ -61,7 +61,7 @@ class Module
     end
 
     if self.const_defined?(:LUDICROUS_OPTIONS) then
-      return self::LUDICROUS_OPTIONS.dont_compile)
+      return self::LUDICROUS_OPTIONS.dont_compile
     end
 
     return false
