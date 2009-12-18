@@ -1,6 +1,8 @@
 require 'test/unit'
 require 'ludicrous'
 
+BAR = 42
+
 class TestLudicrous < Test::Unit::TestCase
   def compile_and_run(obj, method, *args)
     m = obj.method(method)
@@ -507,6 +509,39 @@ class TestLudicrous < Test::Unit::TestCase
       def foo
         iter { return 42 }
         assert false, "Should not reach this point"
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal 42, result
+  end
+
+  def test_constant
+    foo = Class.new do
+      def foo
+        return BAR
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal 42, result
+  end
+
+  def test_colon2
+    foo = Class.new do
+      def foo(klass)
+        return klass::BAR
+      end
+    end
+    bar = Class.new do
+      const_set(:BAR, 42)
+    end
+    result = compile_and_run(foo.new, :foo, bar)
+    assert_equal 42, result
+  end
+
+  def test_colon3
+    foo = Class.new do
+      def foo
+        return ::BAR
       end
     end
     result = compile_and_run(foo.new, :foo)
