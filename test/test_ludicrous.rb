@@ -548,6 +548,26 @@ class TestLudicrous < Test::Unit::TestCase
     assert_equal 42, result
   end
 
+  def test_ternary_true
+    foo = Class.new do
+      def foo
+        return true ? 1 : 2
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal 1, result
+  end
+
+  def test_ternary_false
+    foo = Class.new do
+      def foo
+        return false ? 1 : 2
+      end
+    end
+    result = compile_and_run(foo.new, :foo)
+    assert_equal 2, result
+  end
+
 =begin
   TODO: bmethod not yet supported
 
