@@ -74,7 +74,10 @@ struct global_entry * rb_global_entry(ID id);
 
 static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name)
 {
-  VALUE member_name_info = rb_hash_aref(
+  struct Member_Info * member_info;
+  VALUE member_name_info, member_info_v;
+ 
+  member_name_info = rb_hash_aref(
       struct_name_to_member_name_info, 
       struct_name);
   if(member_name_info == Qnil)
@@ -86,7 +89,7 @@ static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name
         StringValueCStr(s_struct_name));
   }
 
-  VALUE member_info_v = rb_hash_aref(
+  member_info_v = rb_hash_aref(
       member_name_info,
       member_name);
   if(member_info_v == Qnil)
@@ -98,7 +101,6 @@ static struct Member_Info * get_member_info(VALUE struct_name, VALUE member_name
         StringValueCStr(s_member_name));
   }
 
-  struct Member_Info * member_info;
   Data_Get_Struct(member_info_v, struct Member_Info, member_info);
 
   return member_info;
@@ -129,6 +131,7 @@ static VALUE function_ruby_struct_member(
 {
   jit_function_t function;
   jit_value_t ptr = get_value(ptr_v, "ptr");
+  jit_value_t result;
 
   struct Member_Info * member_info = get_member_info(
       struct_name,
@@ -136,7 +139,7 @@ static VALUE function_ruby_struct_member(
 
   Data_Get_Struct(self, struct _jit_function, function);
 
-  jit_value_t result = jit_insn_load_relative(
+  result = jit_insn_load_relative(
       function, ptr, member_info->offset, member_info->type);
 
   return Data_Wrap_Struct(rb_cValue, 0, 0, result);
@@ -148,13 +151,14 @@ static VALUE function_have_ruby_struct_member(
   VALUE member_name_info = rb_hash_aref(
       struct_name_to_member_name_info, 
       struct_name);
+  VALUE member_info_v;
 
   if(member_name_info == Qnil)
   {
     return Qfalse;
   }
 
-  VALUE member_info_v = rb_hash_aref(
+  member_info_v = rb_hash_aref(
       member_name_info,
       member_name);
 
@@ -429,7 +433,7 @@ static VALUE function_pointer_of(VALUE klass, VALUE function_name)
     rb_raise(
         rb_eArgError,
         "No such function pointer defined: %s",
-        STR2CSTR(name_str));
+        StringValuePtr(name_str));
   }
 
   return v;
@@ -444,15 +448,17 @@ static void add_member_info(
     size_t offset,
     jit_type_t type)
 {
-  VALUE array_info = rb_hash_aref(struct_name_to_member_name_info, ID2SYM(rb_intern(struct_name)));
+  struct Member_Info * member_info;
+  VALUE array_info, member_info_v;
+
+  array_info = rb_hash_aref(struct_name_to_member_name_info, ID2SYM(rb_intern(struct_name)));
   if(array_info == Qnil)
   {
     array_info = rb_hash_new();
     rb_hash_aset(struct_name_to_member_name_info, ID2SYM(rb_intern(struct_name)), array_info);
   }
 
-  struct Member_Info * member_info;
-  VALUE member_info_v = Data_Make_Struct(rb_cObject, struct Member_Info, 0, xfree, member_info);
+  member_info_v = Data_Make_Struct(rb_cObject, struct Member_Info, 0, xfree, member_info);
   member_info->offset = offset;
   member_info->type = type;
   rb_hash_aset(array_info, ID2SYM(rb_intern(member_name)), member_info_v);
@@ -460,9 +466,12 @@ static void add_member_info(
 
 void Init_ludicrous_ext()
 {
+  VALUE rb_mJIT;
+  VALUE rb_mLudicrous;
+
   rb_require("jit");
 
-  VALUE rb_mJIT = rb_define_module("JIT");
+  rb_mJIT = rb_define_module("JIT");
 
   rb_cFunction = rb_define_class_under(rb_mJIT, "Function", rb_cObject);
   rb_define_method(rb_cFunction, "set_ruby_source", function_set_ruby_source, 1);
@@ -473,7 +482,7 @@ void Init_ludicrous_ext()
 
   rb_cValue = rb_define_class_under(rb_mJIT, "Value", rb_cObject);
 
-  VALUE rb_mLudicrous = rb_define_module("Ludicrous");
+  rb_mLudicrous = rb_define_module("Ludicrous");
   rb_define_module_function(rb_mLudicrous, "function_pointer_of", function_pointer_of, 1);
 
   name_to_function_pointer = rb_hash_new();
@@ -717,8 +726,9 @@ void Init_ludicrous_ext()
   DEFINE_RUBY_STRUCT_MEMBER(rb_vm_tag, retval, jit_type_VALUE);
   DEFINE_RUBY_STRUCT_MEMBER(rb_vm_tag, prev, jit_type_void_ptr);
 
+  rb_require("jit/struct");
+
   {
-    rb_require("jit/struct");
     VALUE rb_mJIT = rb_const_get(rb_cObject, rb_intern("JIT"));
     VALUE rb_cJIT_Array = rb_const_get(rb_mJIT, rb_intern("Array"));
     VALUE rb_cJIT_Type = rb_const_get(rb_mJIT, rb_intern("Type"));
@@ -729,8 +739,11 @@ void Init_ludicrous_ext()
         2,
         jit_ubyte_type,
         INT2NUM(sizeof(jmp_buf)));
+    VALUE rb_cVMTag;
+    ID set_offset_of;
+
     rb_const_set(rb_mLudicrous, rb_intern("JmpBuf"), rb_cJmp_Buf);
-    VALUE rb_cVMTag = rb_eval_string(
+    rb_cVMTag = rb_eval_string(
         "module Ludicrous                      \n"
         "  VMTag = JIT::Struct.new(            \n"
         "      [ :buf, JmpBuf],                \n"
@@ -741,7 +754,7 @@ void Init_ludicrous_ext()
         " end                                  \n"
         " Ludicrous::VMTag                     \n"
         );
-    ID set_offset_of = rb_intern("set_offset_of");
+    set_offset_of = rb_intern("set_offset_of");
 #define SET_OFFSET(klass, c_type, member) \
     rb_funcall( \
         klass, \
