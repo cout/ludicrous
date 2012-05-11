@@ -7,6 +7,22 @@ end
 
 require 'jit'
 
+if not have_header('rubyjit.h') then
+  # ruby-libjit's setup.rb will install rubyjit.h into ruby's include
+  # directory; if it didn't, then perhaps we are using rubygems
+  require 'rubygems'
+  s = nil
+  begin
+    s = Gem::Specification.find_by_name('ruby-libjit')
+  rescue Gem::LoadError
+    $stderr.puts "Could not find rubyjit.h and could not find ruby-libjit gem"
+    exit 1
+  end
+  $CPPFLAGS.gsub!(/^/, "-I#{s.full_gem_path}/ext ")
+  p $CPPFLAGS
+end
+
+
 have_func("rb_errinfo", "ruby.h")
 
 if have_struct_member("struct RObject", "iv_tbl", "ruby.h") then
