@@ -777,8 +777,9 @@ class DEFS
       klass = function.rb_singleton_class(recv)
       defn = function.const(JIT::Type::OBJECT, self.defn)
       set_source(function)
-      function.rb_add_method(
+      function.rb_funcall(
           klass,
+          :add_method,
           function.const(JIT::Type::ID, self.mid),
           function.unwrap_node(defn),
           function.const(JIT::Type::INT, 0)) # TODO: noex
@@ -793,8 +794,9 @@ class DEFN
       klass = function.rb_class_of(env.scope.self)
       defn = function.const(JIT::Type::OBJECT, self.defn)
       set_source(function)
-      function.rb_add_method(
+      function.rb_funcall(
           klass,
+          :add_method,
           function.const(JIT::Type::ID, self.mid),
           function.unwrap_node(defn),
           function.const(JIT::Type::INT, 0)) # TODO: noex

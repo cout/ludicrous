@@ -88,12 +88,6 @@ class Function
       [ JIT::Type::INT, JIT::Type::VOID_PTR ])
 
   define_native_function(
-      :rb_add_method,
-      JIT::Type::VOID,
-      [ :klass, :mid, :body, :noex ],
-      [ JIT::Type::OBJECT, JIT::Type::ID, JIT::Type::OBJECT, JIT::Type::INT ])
-
-  define_native_function(
       :rb_obj_is_kind_of,
       JIT::Type::OBJECT,
       [ :obj, :klass ],

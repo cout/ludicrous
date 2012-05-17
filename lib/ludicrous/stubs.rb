@@ -175,8 +175,10 @@ module JITCompiled
 
           # This is a module function, so fix the module to not have the
           # stub (TODO: perhaps we should just compile the method?)
-          f.rb_add_method(
+
+          f.rb_funcall(
               sc,
+              :add_method,
               name.intern,
               f.unwrap_node(method.body),
               Noex::PUBLIC)
