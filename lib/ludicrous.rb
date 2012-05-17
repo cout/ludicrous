@@ -7,8 +7,9 @@
 require 'thread'
 require 'internal/node'
 require 'internal/node/to_a'
-require 'internal/method/signature'
 require 'internal/noex'
+
+require 'decompiler/method/signature'
 
 # TODO: The only reason this file is required here is that for now, it
 # must be required before ludicrous.so.
