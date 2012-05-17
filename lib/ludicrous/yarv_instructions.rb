@@ -632,29 +632,7 @@ class RubyVM
           ? function.rb_class_of(obj)
           : function.rb_class_of(env.scope.self) # TODO: cref->nd_clss
 
-        # COPY_CREF(miseq->cref_stack, cref);
-        # miseq->klass = klass;
-        # miseq->defined_method_id = id;
-        # newbody = NEW_NODE(RUBY_VM_METHOD_NODE, 0, miseq->self, 0);
-        # rb_add_method(klass, id, newbody, noex);
-
-        # TODO: set_source(function)
-
-        # TODO: set cref on iseq
-        # TODO: set klass on iseq
-        # TODO: set defined_method_id on iseq
-
-        newbody = function.rb_node_newnode(
-            Node::METHOD,
-            0,
-            function.const(JIT::Type::OBJECT, iseq),
-            0)
-
-        function.rb_add_method(
-            klass,
-            function.const(JIT::Type::ID, mid),
-            newbody,
-            function.const(JIT::Type::INT, 0)) # TODO: noex
+        raise RuntimeError, "not implemented"
       end
     end
   end
