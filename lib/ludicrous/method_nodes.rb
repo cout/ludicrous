@@ -6,8 +6,8 @@
 # Code to compile instruction sequences on YARV is found in
 # yarv_iseq.rb.
 
-require 'internal/method/signature'
-require 'internal/proc/signature'
+require 'decompiler/method/signature'
+require 'decompiler/proc/signature'
 
 class Node
 
