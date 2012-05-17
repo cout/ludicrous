@@ -4,9 +4,6 @@
 #include <string.h>
 
 int NODE_MEMO = 0;
-int NODE_METHOD = 0;
-int NODE_FBODY = 0;
-int NODE_CFUNC = 0;
 int NODE_CALL = 0;
 int NODE_FCALL = 0;
 int NODE_SPLAT = 0;
@@ -31,9 +28,6 @@ static int node_value(char const * name)
 void Init_ludicrous_minimal_node()
 {
   NODE_MEMO = node_value("NODE_MEMO");
-  NODE_METHOD = node_value("NODE_METHOD");
-  NODE_FBODY = node_value("NODE_FBODY");
-  NODE_CFUNC = node_value("NODE_CFUNC");
   NODE_CALL = node_value("NODE_CALL");
   NODE_FCALL = node_value("NODE_FCALL");
   NODE_SPLAT = node_value("NODE_SPLAT");
