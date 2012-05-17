@@ -55,6 +55,22 @@ struct rb_vm_tag {
 extern VALUE rb_mRubyVMFrozenCore;
 #endif
 
+#ifdef HAVE_TYPE_STRUCT_RTYPEDDATA
+
+#  undef GetThreadPtr
+#  define GetThreadPtr(obj, ptr) \
+   TypedData_Get_Struct((obj), rb_thread_t, p_ruby_threadptr_data_type, (ptr))
+
+  static rb_data_type_t const * p_ruby_threadptr_data_type;
+
+  static void init_ruby_threadptr_data_type()
+  {
+    VALUE thread = rb_thread_current();
+    p_ruby_threadptr_data_type = RTYPEDDATA_TYPE(thread);
+  }
+
+#endif
+
 static VALUE rb_cFunction;
 static VALUE rb_cValue;
 
@@ -221,8 +237,11 @@ extern rb_thread_t * ruby_current_thread;
  */
 static VALUE * * yarv_spp()
 {
-  VALUE * cfp = ruby_current_thread->cfp;
-  return (VALUE * *)&cfp[1];
+  VALUE thread = rb_thread_current();
+  rb_thread_t * th;
+
+  GetThreadPtr(thread, th);
+  return (VALUE * *)&(th->cfp)[1];
 }
 
 #else
@@ -495,7 +514,7 @@ void Init_ludicrous_ext()
   DEFINE_FUNCTION_POINTER(rb_funcall2);
   DEFINE_FUNCTION_POINTER(rb_funcall3);
   DEFINE_FUNCTION_POINTER(rb_call_super);
-  DEFINE_FUNCTION_POINTER(rb_add_method);
+  // DEFINE_FUNCTION_POINTER(rb_add_method);
   DEFINE_FUNCTION_POINTER(rb_obj_is_kind_of);
   DEFINE_FUNCTION_POINTER(rb_obj_as_string);
   DEFINE_FUNCTION_POINTER(rb_str_dup);

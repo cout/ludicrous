@@ -81,6 +81,8 @@ if have_struct_member("struct RHash", "tbl", "ruby.h") then
   $defs[-1] = "-DHAVE_ST_RHASH_TBL"
 end
 
+have_type('struct RTypedData') 
+
 have_type("struct FRAME", [ "ruby.h", "env.h" ])
 have_type("struct SCOPE", [ "ruby.h", "env.h" ])
 
