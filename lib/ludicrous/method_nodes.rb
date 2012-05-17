@@ -326,7 +326,7 @@ class SCOPE
   end
 end
 
-# Ruby 1.9 / YARV
+# Ruby 1.9 / YARV (1.9.1 and earlier)
 class METHOD
   def ludicrous_create_scope(compiler, function)
     needs_addressable_scope = true # TODO
@@ -388,6 +388,72 @@ class METHOD
 
     return result
   end
+end
+
+# Ruby 1.9 / YARV (1.9.2 and later)
+if defined?(RubyVM) then
+class RubyVM::InstructionSequence
+  def ludicrous_create_scope(compiler, function)
+    needs_addressable_scope = true # TODO
+    var_names = self.local_table
+    var_names.concat compiler.arg_names
+    var_names.uniq!
+
+    scope_type = needs_addressable_scope \
+      ? Ludicrous::AddressableScope \
+      : Ludicrous::Scope
+    scope = scope_type.new(function, var_names)
+  end
+
+  def ludicrous_create_environment(compiler, function)
+    scope = ludicrous_create_scope(compiler, function)
+    env = Ludicrous::YarvEnvironment.new(
+        function,
+        compiler.compile_options,
+        compiler.origin_class,
+        scope,
+        self)
+  end
+
+  def ludicrous_compile_optional_default(env, arg)
+    local_table_idx = arg.local_table_idx()
+    arg.iseq.each(arg.pc_start) do |instruction|
+      break if RubyVM::Instruction::SETLOCAL === instruction &&
+        instruction.operands[0] == local_table_idx
+      arg.iseq.ludicrous_compile_next_instruction(
+          env.function,
+          env,
+          instruction)
+    end
+    return env.stack.pop
+  end
+
+  def ludicrous_compile_into_function(
+      origin_class,
+      compile_options = Ludicrous::CompileOptions.new)
+
+    # puts self.body.disasm
+
+    compiler = MethodNodeCompiler.new(
+        self,
+        origin_class,
+        compile_options)
+
+    result = compiler.compile do |function, env|
+      if self.arg_opt_table.size > 0 then
+        # TODO: we can remove this in the future
+        offset = self.arg_opt_table[-1]
+        insn = self.each(offset) { |i| break i }
+        env.branch(offset + insn.length)
+      end
+
+      # LEAVE instruction should generate return instruction
+      self.ludicrous_compile(function, env)
+    end
+
+    return result
+  end
+end
 end
 
 class IVAR
