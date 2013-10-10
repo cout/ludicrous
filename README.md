@@ -47,7 +47,8 @@ and enjoy Ludicrous Speed:
     
     Spaceball1.go_plaid()
 
-== Limitations
+Limitations
+-----------
 
 Ludicrous supports many features of Ruby, and passes all of the tests in bfts
 as well as many of the tests that come with Ruby 1.8.6.  However, there are some
