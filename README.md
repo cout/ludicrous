@@ -6,11 +6,11 @@ experimental stage, its performance is roughly on par with YARV (better in some
 benchmarks, though that may change as more features are added).  It's easy to
 use:
 
-  class MyClass
-    ...
-    include Ludicrous::Speed
-    # (or Ludicrous::JITCompiled)
-  end
+    class MyClass
+      ...
+      include Ludicrous::Speed
+      # (or Ludicrous::JITCompiled)
+    end
 
 How it works
 ------------
@@ -27,25 +27,25 @@ Installation
 
 To install:
 
-  $ gem install ludicrous
+    $ gem install ludicrous
 
 You'll probably also need to install libjit for ruby-libjit to compile
 correctly:
 
-  $ wget ftp://ftp.gnu.org/gnu/dotgnu/libjit/libjit-0.1.2.tar.gz
-  $ tar xvfz libjit-0.1.2.tar.gz
-  $ cd libjit-0.1.2
-  $ ./configure
-  $ make
-  $ sudo make install
+    $ wget ftp://ftp.gnu.org/gnu/dotgnu/libjit/libjit-0.1.2.tar.gz
+    $ tar xvfz libjit-0.1.2.tar.gz
+    $ cd libjit-0.1.2
+    $ ./configure
+    $ make
+    $ sudo make install
 
 and enjoy Ludicrous Speed:
 
-  class Spaceball1
-    ...
-  end
-
-  Spaceball1.go_plaid()
+    class Spaceball1
+      ...
+    end
+    
+    Spaceball1.go_plaid()
 
 == Limitations
 
@@ -55,10 +55,11 @@ features that are unsupported, and will prove to be difficult to support.  These
 include, but are not limited to:
 
     * Trace funcs
-    * Using 'break' with a value
+    * Using `break` with a value
     * Accepting a block as an explicit parameter
-    * Certain methods: eval, instance_eval, class_eval, module_eval, binding
-    * retry
+    * Certain methods: `eval`, `instance_eval`, `class_eval`,
+      `module_eval`, `binding`
+    * `retry`
     * Passing a proc as a block with the & operator 
 
 Ludicrous will attempt to detect these cases and will throw an exception at
