@@ -1,4 +1,5 @@
-= The Ludicrous JIT Compiler
+The Ludicrous JIT Compiler
+==========================
 
 Ludicrous is a just-in-time compiler for Ruby 1.8 and 1.9.  Though still in the
 experimental stage, its performance is roughly on par with YARV (better in some
@@ -11,7 +12,8 @@ use:
     # (or Ludicrous::JITCompiled)
   end
 
-== How it works
+How it works
+------------
 
 When you include the Ludicrous::JITCompiled module, stub methods are installed
 for all the instance methods in that class.  When a stub method is called, the
@@ -20,7 +22,8 @@ method is compiled and the stub replaced with the compiled method.
 To JIT-compile singleton methods, include the JITCompiled module in the
 singleton class.
 
-== Installation
+Installation
+------------
 
 To install:
 
@@ -81,13 +84,15 @@ Ludicrous does not currently promote integers to bignums.
 Match data (e.g. $~, $1..$9) modified in a jit-compiled function affects
 match data in the callee.
 
-== Platforms
+Platforms
+---------
 
 Ludicrous has been developed and tested on Ubuntu Linux on a Pentium 3 with
 Ruby 1.8.6.  It will likely work on any 32-bit platform where libjit has been
 ported.  It is known to not work on 64-bit architectures.
 
-== License
+License
+-------
 
 Ludicrous is licensed under the modified BSD license.  See the file COPYING
 that was distributed with Ludicrous.
