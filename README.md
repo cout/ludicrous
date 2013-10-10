@@ -54,13 +54,13 @@ as well as many of the tests that come with Ruby 1.8.6.  However, there are some
 features that are unsupported, and will prove to be difficult to support.  These
 include, but are not limited to:
 
-    * Trace funcs
-    * Using `break` with a value
-    * Accepting a block as an explicit parameter
-    * Certain methods: `eval`, `instance_eval`, `class_eval`,
-      `module_eval`, `binding`
-    * `retry`
-    * Passing a proc as a block with the & operator 
+* Trace funcs
+* Using `break` with a value
+* Accepting a block as an explicit parameter
+* Certain methods: `eval`, `instance_eval`, `class_eval`, `module_eval`,
+  `binding`
+* `retry`
+* Passing a proc as a block with the & operator 
 
 Ludicrous will attempt to detect these cases and will throw an exception at
 compile-time if it encounters any of them.  The stub method will then be
